@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // Domain Validators
+    function isValidUser() {
+      return hasOnlyAllowedFields(['uid', 'email', 'currency', 'monthlyIncome', 'createdAt']) &&
+             request.resource.data.uid is string &&
+             request.resource.data.email is string &&
+             request.resource.data.currency is string &&
+             (!('monthlyIncome' in request.resource.data) || request.resource.data.monthlyIncome is number) &&
+             request.resource.data.createdAt is string;
+    }
+
+    function isValidTransaction() {
+      return hasOnlyAllowedFields(['uid', 'type', 'amount', 'category', 'date', 'note', 'linkedRecurringId']) &&
+             request.resource.data.uid is string &&
+             request.resource.data.type in ['income', 'expense'] &&
+             request.resource.data.amount is number && request.resource.data.amount >= 0 &&
+             request.resource.data.category is string && request.resource.data.category.size() < 100 &&
+             request.resource.data.date is string &&
+             (!('note' in request.resource.data) || (request.resource.data.note is string && request.resource.data.note.size() < 500)) &&
+             (!('linkedRecurringId' in request.resource.data) || request.resource.data.linkedRecurringId is string);
+    }
+
+    function isValidRecurring() {
+      return hasOnlyAllowedFields(['uid', 'name', 'type', 'expectedAmount', 'frequency', 'nextDueDate', 'autoPay']) &&
+             request.resource.data.uid is string &&
+             request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() < 100 &&
+             request.resource.data.type in ['fixed', 'variable', 'subscription'] &&
+             request.resource.data.expectedAmount is number && request.resource.data.expectedAmount >= 0 &&
+             request.resource.data.frequency in ['monthly', 'yearly', 'weekly'] &&
+             request.resource.data.nextDueDate is string &&
+             request.resource.data.autoPay is bool;
+    }
+
+    function isValidBudget() {
+      return hasOnlyAllowedFields(['uid', 'category', 'limit', 'period']) &&
+             request.resource.data.uid is string &&
+             request.resource.data.category is string && request.resource.data.category.size() > 0 && request.resource.data.category.size() < 100 &&
+             request.resource.data.limit is number && request.resource.data.limit >= 0 &&
+             request.resource.data.period in ['monthly'];
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser() && uidUnchanged();
+      allow update: if isOwner(userId) && isValidUser() && uidNotModified();
+      
+      match /transactions/{transactionId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidTransaction() && uidUnchanged();
+        allow update: if isOwner(userId) && isValidTransaction() && uidNotModified();
+      }
+      
+      match /recurring/{recurringId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidRecurring() && uidUnchanged();
+        allow update: if isOwner(userId) && isValidRecurring() && uidNotModified();
+      }
+      
+      match /budgets/{budgetId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidBudget() && uidUnchanged();
+        allow update: if isOwner(userId) && isValidBudget() && uidNotModified();
+      }
+    }
+  }
+}

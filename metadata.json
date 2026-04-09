@@ -1,0 +1,5 @@
+{
+  "name": "Personal Finance AI",
+  "description": "A full-stack personal finance app with income tracking, recurring bills, budgets, and AI-generated insights.",
+  "requestFramePermissions": []
+}

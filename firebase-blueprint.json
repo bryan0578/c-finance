@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "currency": { "type": "string" },
+        "monthlyIncome": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "currency", "createdAt"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A single income or expense record",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "type": { "type": "string", "enum": ["income", "expense"] },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "note": { "type": "string" },
+        "linkedRecurringId": { "type": "string" }
+      },
+      "required": ["uid", "type", "amount", "category", "date"]
+    },
+    "Recurring": {
+      "title": "Recurring",
+      "description": "A recurring bill or subscription",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["fixed", "variable", "subscription"] },
+        "expectedAmount": { "type": "number" },
+        "frequency": { "type": "string", "enum": ["monthly", "yearly", "weekly"] },
+        "nextDueDate": { "type": "string", "format": "date-time" },
+        "autoPay": { "type": "boolean" }
+      },
+      "required": ["uid", "name", "type", "expectedAmount", "frequency", "nextDueDate", "autoPay"]
+    },
+    "Budget": {
+      "title": "Budget",
+      "description": "A budget limit for a category",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "category": { "type": "string" },
+        "limit": { "type": "number" },
+        "period": { "type": "string", "enum": ["monthly"] }
+      },
+      "required": ["uid", "category", "limit", "period"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "User transactions"
+    },
+    "/users/{userId}/recurring/{recurringId}": {
+      "schema": { "$ref": "#/entities/Recurring" },
+      "description": "User recurring bills"
+    },
+    "/users/{userId}/budgets/{budgetId}": {
+      "schema": { "$ref": "#/entities/Budget" },
+      "description": "User budgets"
+    }
+  }
+}
