@@ -11,6 +11,7 @@ import { loginWithGoogle } from '@/lib/firebase';
 import { LogIn, TrendingUp, TrendingDown, Wallet, Sparkles } from 'lucide-react';
 import { ExpenseChart } from '@/components/charts/expense-chart';
 import { format, isThisMonth, isPast, isToday } from 'date-fns';
+import { Sidebar } from '@/components/layout/sidebar';
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -108,7 +109,7 @@ export default function Dashboard() {
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-gray-500">Welcome back, {user.displayName || 'User'}!</p>
       </div>
-
+    <Sidebar />
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
