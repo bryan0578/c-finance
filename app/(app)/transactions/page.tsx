@@ -1,9 +1,30 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { format, isThisMonth, isThisYear, subDays } from 'date-fns';
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { Search } from 'lucide-react';
+import {
+  format,
+  isThisMonth,
+  isThisYear,
+  isValid,
+  parseISO,
+  subDays,
+} from 'date-fns';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+} from 'firebase/firestore';
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Download,
+  Search,
+  Trash2,
+} from 'lucide-react';
 
 import { useAuth } from '@/components/auth-provider';
 import { db } from '@/lib/firebase';
@@ -11,6 +32,7 @@ import { handleFirestoreError, OperationType } from '@/lib/firestore-error';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TransactionForm } from '@/components/forms/transaction-form';
+import { EditTransactionDialog } from '@/components/forms/edit-transaction-dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,12 +64,23 @@ interface Transaction {
 
 type TypeFilter = 'all' | TransactionType;
 type DateFilter = 'all' | 'this-month' | 'last-30-days' | 'this-year';
+type SortField = 'date' | 'type' | 'category' | 'note' | 'amount';
+type SortDirection = 'asc' | 'desc';
 
 function formatCurrency(value: number) {
   return value.toLocaleString('en-US', {
     style: 'currency',
     currency: 'USD',
   });
+}
+
+function parseTransactionDate(value: string) {
+  if (!value) return null;
+  const parsed = parseISO(value);
+  if (isValid(parsed)) return parsed;
+
+  const fallback = new Date(value);
+  return isValid(fallback) ? fallback : null;
 }
 
 function normalizeTransaction(raw: any): Transaction {
@@ -61,6 +94,68 @@ function normalizeTransaction(raw: any): Transaction {
   };
 }
 
+function getCategoryChipClass(category: string) {
+  const key = category.toLowerCase();
+
+  if (key.includes('food') || key.includes('grocer') || key.includes('dining')) {
+    return 'bg-orange-50 text-orange-700 ring-orange-200';
+  }
+  if (key.includes('rent') || key.includes('bill') || key.includes('util')) {
+    return 'bg-red-50 text-red-700 ring-red-200';
+  }
+  if (key.includes('transport') || key.includes('gas') || key.includes('uber')) {
+    return 'bg-blue-50 text-blue-700 ring-blue-200';
+  }
+  if (key.includes('salary') || key.includes('pay') || key.includes('income')) {
+    return 'bg-green-50 text-green-700 ring-green-200';
+  }
+  if (
+    key.includes('fun') ||
+    key.includes('entertain') ||
+    key.includes('movie') ||
+    key.includes('game')
+  ) {
+    return 'bg-purple-50 text-purple-700 ring-purple-200';
+  }
+
+  return 'bg-gray-50 text-gray-700 ring-gray-200';
+}
+
+function exportTransactionsToCsv(rows: Transaction[]) {
+  const headers = ['Date', 'Type', 'Category', 'Note', 'Amount'];
+
+  const escapeCsvValue = (value: string | number) =>
+    `"${String(value ?? '').replace(/"/g, '""')}"`;
+
+  const csvRows = [
+    headers.join(','),
+    ...rows.map((tx) =>
+      [
+        escapeCsvValue(tx.date),
+        escapeCsvValue(tx.type),
+        escapeCsvValue(tx.category),
+        escapeCsvValue(tx.note),
+        escapeCsvValue(tx.amount),
+      ].join(',')
+    ),
+  ];
+
+  const blob = new Blob([csvRows.join('\n')], {
+    type: 'text/csv;charset=utf-8;',
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const stamp = format(new Date(), 'yyyy-MM-dd');
+
+  link.href = url;
+  link.setAttribute('download', `transactions-${stamp}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export default function TransactionsPage() {
   const { user } = useAuth();
 
@@ -71,6 +166,12 @@ export default function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
 
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
+
   useEffect(() => {
     if (!user) return;
 
@@ -80,10 +181,10 @@ export default function TransactionsPage() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const txs = snapshot.docs.map((doc) =>
+        const txs = snapshot.docs.map((docItem) =>
           normalizeTransaction({
-            id: doc.id,
-            ...doc.data(),
+            id: docItem.id,
+            ...docItem.data(),
           })
         );
 
@@ -99,11 +200,54 @@ export default function TransactionsPage() {
     return () => unsubscribe();
   }, [user]);
 
-  const filteredTransactions = useMemo(() => {
+
+  async function handleDeleteTransaction(transactionId: string) {
+    if (!user) return;
+
+    const confirmed = window.confirm(
+      'Delete this transaction? This action cannot be undone.'
+    );
+
+    if (!confirmed) return;
+
+    const path = `users/${user.uid}/transactions/${transactionId}`;
+
+    try {
+      await deleteDoc(doc(db, path));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  }
+
+  function handleSort(field: SortField) {
+    setCurrentPage(1);
+  
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+  
+    setSortField(field);
+    setSortDirection(field === 'date' || field === 'amount' ? 'desc' : 'asc');
+  }
+
+  function renderSortIcon(field: SortField) {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground" />;
+    }
+
+    return sortDirection === 'asc' ? (
+      <ArrowUp className="ml-2 h-4 w-4" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4" />
+    );
+  }
+
+  const processedTransactions = useMemo(() => {
     const searchValue = search.trim().toLowerCase();
 
-    return transactions.filter((tx) => {
-      const txDate = tx.date ? new Date(tx.date) : null;
+    const filtered = transactions.filter((tx) => {
+      const txDate = parseTransactionDate(tx.date);
 
       const matchesSearch =
         !searchValue ||
@@ -111,13 +255,12 @@ export default function TransactionsPage() {
         tx.note.toLowerCase().includes(searchValue) ||
         tx.type.toLowerCase().includes(searchValue);
 
-      const matchesType =
-        typeFilter === 'all' ? true : tx.type === typeFilter;
+      const matchesType = typeFilter === 'all' || tx.type === typeFilter;
 
       const matchesDate =
         dateFilter === 'all'
           ? true
-          : txDate instanceof Date && !Number.isNaN(txDate.getTime())
+          : txDate
             ? dateFilter === 'this-month'
               ? isThisMonth(txDate)
               : dateFilter === 'last-30-days'
@@ -127,24 +270,89 @@ export default function TransactionsPage() {
 
       return matchesSearch && matchesType && matchesDate;
     });
-  }, [transactions, search, typeFilter, dateFilter]);
+
+    const sorted = [...filtered].sort((a, b) => {
+      let result = 0;
+
+      switch (sortField) {
+        case 'date': {
+          const dateA = parseTransactionDate(a.date)?.getTime() ?? 0;
+          const dateB = parseTransactionDate(b.date)?.getTime() ?? 0;
+          result = dateA - dateB;
+          break;
+        }
+        case 'amount':
+          result = a.amount - b.amount;
+          break;
+        case 'type':
+          result = a.type.localeCompare(b.type);
+          break;
+        case 'category':
+          result = a.category.localeCompare(b.category);
+          break;
+        case 'note':
+          result = a.note.localeCompare(b.note);
+          break;
+      }
+
+      return sortDirection === 'asc' ? result : -result;
+    });
+
+    return sorted;
+  }, [transactions, search, typeFilter, dateFilter, sortField, sortDirection]);
 
   const summary = useMemo(() => {
-    const income = filteredTransactions
+    const income = processedTransactions
       .filter((tx) => tx.type === 'income')
       .reduce((sum, tx) => sum + tx.amount, 0);
 
-    const expenses = filteredTransactions
+    const expenses = processedTransactions
       .filter((tx) => tx.type === 'expense')
       .reduce((sum, tx) => sum + tx.amount, 0);
 
     return {
-      count: filteredTransactions.length,
+      count: processedTransactions.length,
       income,
       expenses,
       net: income - expenses,
     };
-  }, [filteredTransactions]);
+  }, [processedTransactions]);
+
+  const groupedTransactions = useMemo(() => {
+    const groups = new Map<string, Transaction[]>();
+
+    for (const tx of processedTransactions) {
+      const parsed = parseTransactionDate(tx.date);
+      const key = parsed ? format(parsed, 'MMMM d, yyyy') : 'Unknown date';
+
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+
+      groups.get(key)?.push(tx);
+    }
+
+    return Array.from(groups.entries()).map(([label, items]) => ({
+      label,
+      items,
+    }));
+  }, [processedTransactions]);
+
+  const flatRows = useMemo(
+    () =>
+      groupedTransactions.flatMap((group) => [
+        { kind: 'group' as const, label: group.label },
+        ...group.items.map((tx) => ({ kind: 'item' as const, tx })),
+      ]),
+    [groupedTransactions]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(flatRows.length / pageSize));
+  const currentPageSafe = Math.min(currentPage, totalPages);
+  const paginatedRows = flatRows.slice(
+    (currentPageSafe - 1) * pageSize,
+    currentPageSafe * pageSize
+  );
 
   if (!user) return null;
 
@@ -154,11 +362,23 @@ export default function TransactionsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
           <p className="text-muted-foreground">
-            Search, filter, and review your income and expenses.
+            Search, sort, edit, and export your income and expenses.
           </p>
         </div>
 
-        <TransactionForm />
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-md"
+            onClick={() => exportTransactionsToCsv(processedTransactions)}
+            disabled={processedTransactions.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
+          <TransactionForm />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -228,7 +448,10 @@ export default function TransactionsPage() {
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   placeholder="Search category, note, or type"
                   className="h-10 rounded-md pl-9"
                 />
@@ -239,7 +462,10 @@ export default function TransactionsPage() {
                   type="button"
                   variant={typeFilter === 'all' ? 'default' : 'outline'}
                   className="rounded-md"
-                  onClick={() => setTypeFilter('all')}
+                  onClick={() => {
+                    setTypeFilter('all');
+                    setCurrentPage(1);
+                  }}
                 >
                   All
                 </Button>
@@ -247,7 +473,10 @@ export default function TransactionsPage() {
                   type="button"
                   variant={typeFilter === 'income' ? 'default' : 'outline'}
                   className="rounded-md"
-                  onClick={() => setTypeFilter('income')}
+                  onClick={() => {
+                    setTypeFilter('income');
+                    setCurrentPage(1);
+                  }}
                 >
                   Income
                 </Button>
@@ -255,7 +484,10 @@ export default function TransactionsPage() {
                   type="button"
                   variant={typeFilter === 'expense' ? 'default' : 'outline'}
                   className="rounded-md"
-                  onClick={() => setTypeFilter('expense')}
+                  onClick={() => {
+                    setTypeFilter('expense');
+                    setCurrentPage(1);
+                  }}
                 >
                   Expenses
                 </Button>
@@ -263,7 +495,10 @@ export default function TransactionsPage() {
 
               <Select
                 value={dateFilter}
-                onValueChange={(value) => setDateFilter(value as DateFilter)}
+                onValueChange={(value) => {
+                    setDateFilter(value as DateFilter);
+                    setCurrentPage(1);
+                  }}
               >
                 <SelectTrigger className="h-10 w-[180px] rounded-md">
                   <SelectValue placeholder="Filter by date" />
@@ -293,7 +528,7 @@ export default function TransactionsPage() {
                 <TransactionForm />
               </div>
             </div>
-          ) : filteredTransactions.length === 0 ? (
+          ) : processedTransactions.length === 0 ? (
             <div className="py-10 text-center">
               <p className="text-sm text-muted-foreground">
                 No transactions match your current filters.
@@ -314,78 +549,198 @@ export default function TransactionsPage() {
               </div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Note</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
+            <>
+              <div className="overflow-x-auto rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableHead>
+                        <button
+                          type="button"
+                          onClick={() => handleSort('date')}
+                          className="inline-flex items-center font-medium"
+                        >
+                          Date
+                          {renderSortIcon('date')}
+                        </button>
+                      </TableHead>
 
-                <TableBody>
-                  {filteredTransactions.map((tx) => {
-                    const parsedDate = tx.date ? new Date(tx.date) : null;
-                    const validDate =
-                      parsedDate instanceof Date &&
-                      !Number.isNaN(parsedDate.getTime());
+                      <TableHead>
+                        <button
+                          type="button"
+                          onClick={() => handleSort('type')}
+                          className="inline-flex items-center font-medium"
+                        >
+                          Type
+                          {renderSortIcon('type')}
+                        </button>
+                      </TableHead>
 
-                    return (
-                      <TableRow
-                        key={tx.id}
-                        className="transition-colors hover:bg-muted/40"
-                        title={`${tx.type === 'income' ? 'Income' : 'Expense'} • ${
-                          tx.category
-                        } • ${formatCurrency(tx.amount)}`}
-                      >
-                        <TableCell className="whitespace-nowrap text-sm">
-                          {validDate ? format(parsedDate, 'MMM d, yyyy') : '—'}
-                        </TableCell>
+                      <TableHead>
+                        <button
+                          type="button"
+                          onClick={() => handleSort('category')}
+                          className="inline-flex items-center font-medium"
+                        >
+                          Category
+                          {renderSortIcon('category')}
+                        </button>
+                      </TableHead>
 
-                        <TableCell>
-                          <span
-                            className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${
+                      <TableHead>
+                        <button
+                          type="button"
+                          onClick={() => handleSort('note')}
+                          className="inline-flex items-center font-medium"
+                        >
+                          Note
+                          {renderSortIcon('note')}
+                        </button>
+                      </TableHead>
+
+                      <TableHead className="text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleSort('amount')}
+                          className="inline-flex items-center justify-end font-medium"
+                        >
+                          Amount
+                          {renderSortIcon('amount')}
+                        </button>
+                      </TableHead>
+
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+
+                  <TableBody>
+                    {paginatedRows.map((row, index) => {
+                      if (row.kind === 'group') {
+                        return (
+                          <TableRow key={`group-${row.label}-${index}`} className="bg-muted/20 hover:bg-muted/20">
+                            <TableCell
+                              colSpan={6}
+                              className="py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                            >
+                              {row.label}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      }
+
+                      const tx = row.tx;
+
+                      return (
+                        <TableRow
+                          key={tx.id}
+                          className="group transition-colors hover:bg-muted/40"
+                          title={`${tx.type === 'income' ? 'Income' : 'Expense'} • ${
+                            tx.category
+                          } • ${formatCurrency(tx.amount)}`}
+                        >
+                          <TableCell className="whitespace-nowrap text-sm">
+                            {(() => {
+                              const parsedDate = parseTransactionDate(tx.date);
+                              return parsedDate ? format(parsedDate, 'MMM d, yyyy') : '—';
+                            })()}
+                          </TableCell>
+
+                          <TableCell>
+                            <span
+                              className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${
+                                tx.type === 'income'
+                                  ? 'bg-green-50 text-green-700'
+                                  : 'bg-red-50 text-red-700'
+                              }`}
+                            >
+                              {tx.type === 'income' ? 'Income' : 'Expense'}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            <span
+                              className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ring-1 ${getCategoryChipClass(
+                                tx.category
+                              )}`}
+                            >
+                              {tx.category}
+                            </span>
+                          </TableCell>
+
+                          <TableCell className="max-w-[280px]">
+                            <div
+                              className="truncate text-muted-foreground"
+                              title={tx.note || 'No note'}
+                            >
+                              {tx.note || '—'}
+                            </div>
+                          </TableCell>
+
+                          <TableCell
+                            className={`text-right font-medium ${
                               tx.type === 'income'
-                                ? 'bg-green-50 text-green-700'
-                                : 'bg-red-50 text-red-700'
+                                ? 'text-green-600'
+                                : 'text-foreground'
                             }`}
                           >
-                            {tx.type === 'income' ? 'Income' : 'Expense'}
-                          </span>
-                        </TableCell>
+                            {tx.type === 'income' ? '+' : '-'}
+                            {formatCurrency(tx.amount)}
+                          </TableCell>
 
-                        <TableCell className="font-medium">
-                          {tx.category}
-                        </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                              <EditTransactionDialog
+                                userId={user.uid}
+                                transaction={tx}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="rounded-md text-red-600 hover:text-red-700"
+                                onClick={() => handleDeleteTransaction(tx.id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
 
-                        <TableCell className="max-w-[320px]">
-                          <div
-                            className="truncate text-muted-foreground"
-                            title={tx.note || 'No note'}
-                          >
-                            {tx.note || '—'}
-                          </div>
-                        </TableCell>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Showing page {currentPageSafe} of {totalPages}
+                </p>
 
-                        <TableCell
-                          className={`text-right font-medium ${
-                            tx.type === 'income'
-                              ? 'text-green-600'
-                              : 'text-foreground'
-                          }`}
-                        >
-                          {tx.type === 'income' ? '+' : '-'}
-                          {formatCurrency(tx.amount)}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-md"
+                    disabled={currentPageSafe === 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-md"
+                    disabled={currentPageSafe === totalPages}
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                    }
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
