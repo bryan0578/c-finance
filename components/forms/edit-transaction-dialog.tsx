@@ -130,7 +130,7 @@ export function EditTransactionDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="rounded-md">
+        <Button type="button" variant="outline" size="sm" className="">
           <Pencil className="mr-2 h-4 w-4" />
           Edit
         </Button>
@@ -158,7 +158,7 @@ export function EditTransactionDialog({
                       <FormLabel>Type</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
-                          <SelectTrigger className="h-10 w-full rounded-md">
+                          <SelectTrigger className="h-10 w-full">
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
                         </FormControl>
@@ -190,7 +190,7 @@ export function EditTransactionDialog({
                             step="0.01"
                             min="0"
                             placeholder="0.00"
-                            className="h-10 rounded-md pl-8"
+                            className="h-10 pl-8"
                           />
                         </div>
                       </FormControl>
@@ -210,7 +210,7 @@ export function EditTransactionDialog({
                       <FormControl>
                         <Input
                           {...field}
-                          className="h-10 rounded-md"
+                          className="h-10"
                           placeholder="Groceries, Salary, Rent"
                         />
                       </FormControl>
@@ -230,7 +230,7 @@ export function EditTransactionDialog({
                           <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
                             type="date"
-                            className="h-10 rounded-md pl-10"
+                            className="h-10 pl-10"
                             {...field}
                           />
                         </div>
@@ -250,7 +250,7 @@ export function EditTransactionDialog({
                     <FormControl>
                       <Input
                         {...field}
-                        className="h-10 rounded-md"
+                        className="h-10"
                         placeholder="Brief description"
                       />
                     </FormControl>
@@ -265,11 +265,11 @@ export function EditTransactionDialog({
                   variant="outline"
                   onClick={() => setOpen(false)}
                   disabled={isSubmitting}
-                  className="rounded-md"
+                  className=""
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting} className="rounded-md">
+                <Button type="submit" disabled={isSubmitting} className="">
                   {isSubmitting ? 'Saving...' : 'Save changes'}
                 </Button>
               </div>
