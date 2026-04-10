@@ -2,22 +2,20 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Plus, CalendarDays } from 'lucide-react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import * as z from 'zod';
 
 import { useAuth } from '@/components/auth-provider';
 import { db } from '@/lib/firebase';
 import { handleFirestoreError, OperationType } from '@/lib/firestore-error';
 
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
@@ -45,21 +43,30 @@ const formSchema = z.object({
     .min(1, 'Bill name is required')
     .max(50, 'Bill name must be 50 characters or less'),
   type: z.enum(['fixed', 'variable', 'subscription']),
-  expectedAmount: z.coerce
-    .number()
-    .finite('Amount must be a valid number')
-    .min(0, 'Amount must be 0 or greater'),
+  expectedAmount: z
+    .string()
+    .min(1, 'Expected amount is required')
+    .refine((value) => !Number.isNaN(Number(value)), 'Amount must be a valid number')
+    .transform((value) => Number(value))
+    .refine((value) => value >= 0, 'Amount must be 0 or greater'),
   frequency: z.enum(['weekly', 'monthly', 'yearly']),
   nextDueDate: z.string().min(1, 'Next due date is required'),
 });
 
 type BillFormValues = z.infer<typeof formSchema>;
-type BillFormInput = z.input<typeof formSchema>;
+
+type BillFormInput = {
+  name: string;
+  type: 'fixed' | 'variable' | 'subscription';
+  expectedAmount: string;
+  frequency: 'weekly' | 'monthly' | 'yearly';
+  nextDueDate: string;
+};
 
 const defaultValues: BillFormInput = {
   name: '',
   type: 'fixed',
-  expectedAmount: 0,
+  expectedAmount: '',
   frequency: 'monthly',
   nextDueDate: new Date().toISOString().split('T')[0],
 };
@@ -71,7 +78,6 @@ export function BillForm() {
   const form = useForm<BillFormInput, unknown, BillFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues,
-    mode: 'onSubmit',
   });
 
   const isSubmitting = form.formState.isSubmitting;
@@ -102,10 +108,7 @@ export function BillForm() {
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
-
-    if (!nextOpen) {
-      form.reset(defaultValues);
-    }
+    if (!nextOpen) form.reset(defaultValues);
   }
 
   return (
@@ -117,18 +120,20 @@ export function BillForm() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="overflow-hidden rounded-2xl p-0 sm:max-w-[560px]">
-        <DialogHeader className="border-b px-6 py-5">
-          <DialogTitle className="text-xl">Add recurring bill</DialogTitle>
-          <DialogDescription className="pt-1 text-sm text-muted-foreground">
+      <DialogContent className="sm:max-w-[620px] rounded-2xl p-0">
+        <div className="px-6 pt-6 pb-4">
+          <DialogTitle className="text-2xl font-semibold tracking-tight">
+            Add recurring bill
+          </DialogTitle>
+          <DialogDescription className="mt-2 max-w-[48ch] text-sm text-muted-foreground">
             Save a fixed bill, variable expense, or subscription so upcoming
             payments stay visible.
           </DialogDescription>
-        </DialogHeader>
+        </div>
 
-        <div className="px-6 py-5">
+        <div className="px-6 pb-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
                 name="name"
@@ -138,8 +143,9 @@ export function BillForm() {
                     <FormControl>
                       <Input
                         {...field}
-                        autoComplete="off"
                         placeholder="Rent, Netflix, Spotify"
+                        autoComplete="off"
+                        className="h-11 rounded-xl"
                       />
                     </FormControl>
                     <FormMessage />
@@ -156,7 +162,7 @@ export function BillForm() {
                       <FormLabel>Type</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="h-11 w-full rounded-xl">
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
                         </FormControl>
@@ -179,7 +185,7 @@ export function BillForm() {
                       <FormLabel>Frequency</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="h-11 w-full rounded-xl">
                             <SelectValue placeholder="Select frequency" />
                           </SelectTrigger>
                         </FormControl>
@@ -213,20 +219,8 @@ export function BillForm() {
                             step="0.01"
                             min="0"
                             placeholder="0.00"
-                            className="pl-8"
-                            name={field.name}
-                            ref={field.ref}
-                            onBlur={field.onBlur}
-                            value={
-                              typeof field.value === 'number' ||
-                              typeof field.value === 'string'
-                                ? field.value
-                                : ''
-                            }
-                            onChange={(event) => {
-                              const value = event.currentTarget.value;
-                              field.onChange(value === '' ? '' : value);
-                            }}
+                            className="h-11 rounded-xl pl-8"
+                            {...field}
                           />
                         </div>
                       </FormControl>
@@ -244,7 +238,11 @@ export function BillForm() {
                       <FormControl>
                         <div className="relative">
                           <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                          <Input type="date" className="pl-10" {...field} />
+                          <Input
+                            type="date"
+                            className="h-11 rounded-xl pl-10"
+                            {...field}
+                          />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -253,22 +251,24 @@ export function BillForm() {
                 />
               </div>
 
-              <DialogFooter className="border-t pt-5">
-                <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={isSubmitting}
-                    onClick={() => setOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? 'Saving...' : 'Save bill'}
-                  </Button>
-                </div>
-              </DialogFooter>
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                  disabled={isSubmitting}
+                  className="rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="rounded-xl"
+                >
+                  {isSubmitting ? 'Saving...' : 'Save bill'}
+                </Button>
+              </div>
             </form>
           </Form>
         </div>
