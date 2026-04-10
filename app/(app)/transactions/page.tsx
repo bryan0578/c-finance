@@ -317,43 +317,13 @@ export default function TransactionsPage() {
       net: income - expenses,
     };
   }, [processedTransactions]);
-
-  const groupedTransactions = useMemo(() => {
-    const groups = new Map<string, Transaction[]>();
-
-    for (const tx of processedTransactions) {
-      const parsed = parseTransactionDate(tx.date);
-      const key = parsed ? format(parsed, 'MMMM d, yyyy') : 'Unknown date';
-
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-
-      groups.get(key)?.push(tx);
-    }
-
-    return Array.from(groups.entries()).map(([label, items]) => ({
-      label,
-      items,
-    }));
-  }, [processedTransactions]);
-
-  const flatRows = useMemo(
-    () =>
-      groupedTransactions.flatMap((group) => [
-        { kind: 'group' as const, label: group.label },
-        ...group.items.map((tx) => ({ kind: 'item' as const, tx })),
-      ]),
-    [groupedTransactions]
-  );
-
-  const totalPages = Math.max(1, Math.ceil(flatRows.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(processedTransactions.length / pageSize));
   const currentPageSafe = Math.min(currentPage, totalPages);
-  const paginatedRows = flatRows.slice(
+  
+  const paginatedTransactions = processedTransactions.slice(
     (currentPageSafe - 1) * pageSize,
     currentPageSafe * pageSize
   );
-
   if (!user) return null;
 
   return (
@@ -370,7 +340,7 @@ export default function TransactionsPage() {
           <Button
             type="button"
             variant="outline"
-            className="rounded-md"
+            className=""
             onClick={() => exportTransactionsToCsv(processedTransactions)}
             disabled={processedTransactions.length === 0}
           >
@@ -453,7 +423,7 @@ export default function TransactionsPage() {
                     setCurrentPage(1);
                   }}
                   placeholder="Search category, note, or type"
-                  className="h-10 rounded-md pl-9"
+                  className="h-10 pl-9"
                 />
               </div>
 
@@ -461,7 +431,7 @@ export default function TransactionsPage() {
                 <Button
                   type="button"
                   variant={typeFilter === 'all' ? 'default' : 'outline'}
-                  className="rounded-md"
+                  className=""
                   onClick={() => {
                     setTypeFilter('all');
                     setCurrentPage(1);
@@ -472,7 +442,7 @@ export default function TransactionsPage() {
                 <Button
                   type="button"
                   variant={typeFilter === 'income' ? 'default' : 'outline'}
-                  className="rounded-md"
+                  className=""
                   onClick={() => {
                     setTypeFilter('income');
                     setCurrentPage(1);
@@ -483,7 +453,7 @@ export default function TransactionsPage() {
                 <Button
                   type="button"
                   variant={typeFilter === 'expense' ? 'default' : 'outline'}
-                  className="rounded-md"
+                  className=""
                   onClick={() => {
                     setTypeFilter('expense');
                     setCurrentPage(1);
@@ -500,7 +470,7 @@ export default function TransactionsPage() {
                     setCurrentPage(1);
                   }}
               >
-                <SelectTrigger className="h-10 w-[180px] rounded-md">
+                <SelectTrigger className="h-10 w-[180px]">
                   <SelectValue placeholder="Filter by date" />
                 </SelectTrigger>
                 <SelectContent>
@@ -537,7 +507,7 @@ export default function TransactionsPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="rounded-md"
+                  className=""
                   onClick={() => {
                     setSearch('');
                     setTypeFilter('all');
@@ -550,7 +520,7 @@ export default function TransactionsPage() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto rounded-md border">
+              <div className="overflow-x-auto border">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/30 hover:bg-muted/30">
@@ -614,101 +584,77 @@ export default function TransactionsPage() {
                   </TableHeader>
 
                   <TableBody>
-                    {paginatedRows.map((row, index) => {
-                      if (row.kind === 'group') {
+                    {paginatedTransactions.map((tx) => {
+                        const parsedDate = parseTransactionDate(tx.date);
+
                         return (
-                          <TableRow key={`group-${row.label}-${index}`} className="bg-muted/20 hover:bg-muted/20">
-                            <TableCell
-                              colSpan={6}
-                              className="py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                            >
-                              {row.label}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      }
-
-                      const tx = row.tx;
-
-                      return (
                         <TableRow
-                          key={tx.id}
-                          className="group transition-colors hover:bg-muted/40"
-                          title={`${tx.type === 'income' ? 'Income' : 'Expense'} • ${
-                            tx.category
-                          } • ${formatCurrency(tx.amount)}`}
+                            key={tx.id}
+                            className="transition-colors hover:bg-muted/40"
                         >
-                          <TableCell className="whitespace-nowrap text-sm">
-                            {(() => {
-                              const parsedDate = parseTransactionDate(tx.date);
-                              return parsedDate ? format(parsedDate, 'MMM d, yyyy') : '—';
-                            })()}
-                          </TableCell>
+                            <TableCell className="whitespace-nowrap text-sm">
+                            {parsedDate ? format(parsedDate, 'MMM d, yyyy') : '—'}
+                            </TableCell>
 
-                          <TableCell>
+                            <TableCell>
                             <span
-                              className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${
+                                className={`inline-flex px-2 py-1 text-xs font-medium ${
                                 tx.type === 'income'
-                                  ? 'bg-green-50 text-green-700'
-                                  : 'bg-red-50 text-red-700'
-                              }`}
+                                    ? 'bg-green-50 text-green-700'
+                                    : 'bg-red-50 text-red-700'
+                                }`}
                             >
-                              {tx.type === 'income' ? 'Income' : 'Expense'}
+                                {tx.type === 'income' ? 'Income' : 'Expense'}
                             </span>
-                          </TableCell>
+                            </TableCell>
 
-                          <TableCell>
+                            <TableCell>
                             <span
-                              className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ring-1 ${getCategoryChipClass(
+                                className={`inline-flex px-2 py-1 text-xs font-medium ring-1 ${getCategoryChipClass(
                                 tx.category
-                              )}`}
+                                )}`}
                             >
-                              {tx.category}
+                                {tx.category}
                             </span>
-                          </TableCell>
+                            </TableCell>
 
-                          <TableCell className="max-w-[280px]">
-                            <div
-                              className="truncate text-muted-foreground"
-                              title={tx.note || 'No note'}
-                            >
-                              {tx.note || '—'}
+                            <TableCell className="max-w-[280px]">
+                            <div className="truncate text-muted-foreground">
+                                {tx.note || '—'}
                             </div>
-                          </TableCell>
+                            </TableCell>
 
-                          <TableCell
+                            <TableCell
                             className={`text-right font-medium ${
-                              tx.type === 'income'
-                                ? 'text-green-600'
-                                : 'text-foreground'
+                                tx.type === 'income' ? 'text-green-600' : 'text-foreground'
                             }`}
-                          >
+                            >
                             {tx.type === 'income' ? '+' : '-'}
                             {formatCurrency(tx.amount)}
-                          </TableCell>
+                            </TableCell>
 
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                              <EditTransactionDialog
+                            <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                                <EditTransactionDialog
                                 userId={user.uid}
                                 transaction={tx}
-                              />
-                              <Button
+                                />
+                                <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="rounded-md text-red-600 hover:text-red-700"
+                                className="text-red-600 hover:text-red-700"
                                 onClick={() => handleDeleteTransaction(tx.id)}
-                              >
+                                >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Delete
-                              </Button>
+                                </Button>
                             </div>
-                          </TableCell>
+                            </TableCell>
                         </TableRow>
-                      );
+                        );
                     })}
-                  </TableBody>
+                    </TableBody>
                 </Table>
               </div>
 
@@ -721,7 +667,7 @@ export default function TransactionsPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="rounded-md"
+                    className=""
                     disabled={currentPageSafe === 1}
                     onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   >
@@ -730,7 +676,7 @@ export default function TransactionsPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="rounded-md"
+                    className=""
                     disabled={currentPageSafe === totalPages}
                     onClick={() =>
                       setCurrentPage((prev) => Math.min(totalPages, prev + 1))
