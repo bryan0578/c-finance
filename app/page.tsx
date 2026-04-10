@@ -1,201 +1,85 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
-import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { handleFirestoreError, OperationType } from '@/lib/firestore-error';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { loginWithGoogle } from '@/lib/firebase';
-import { LogIn, TrendingUp, TrendingDown, Wallet, Sparkles } from 'lucide-react';
-import { ExpenseChart } from '@/components/charts/expense-chart';
-import { format, isThisMonth, isPast, isToday } from 'date-fns';
-import { Sidebar } from '@/components/layout/sidebar';
+import { Button } from '@/components/ui/button';
+import { LogIn, Sparkles, Wallet, Receipt, CalendarSync } from 'lucide-react';
 
-export default function Dashboard() {
+export default function HomePage() {
   const { user, loading } = useAuth();
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [bills, setBills] = useState<any[]>([]);
-  const [insights, setInsights] = useState<string>('');
-  const [loadingInsights, setLoadingInsights] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
-    if (!user) return;
-
-    const txPath = `users/${user.uid}/transactions`;
-    const qTx = query(collection(db, txPath), orderBy('date', 'desc'));
-    const unsubTx = onSnapshot(qTx, (snapshot) => {
-      setTransactions(snapshot.docs.map(doc => doc.data()));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, txPath));
-
-    const billsPath = `users/${user.uid}/recurring`;
-    const qBills = query(collection(db, billsPath), orderBy('nextDueDate', 'asc'));
-    const unsubBills = onSnapshot(qBills, (snapshot) => {
-      setBills(snapshot.docs.map(doc => doc.data()));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, billsPath));
-
-    return () => {
-      unsubTx();
-      unsubBills();
-    };
-  }, [user]);
-
-  const generateInsights = async () => {
-    setLoadingInsights(true);
-    try {
-      // Aggregate data for Gemini
-      const thisMonthTx = transactions.filter(tx => isThisMonth(new Date(tx.date)));
-      const totalIncome = thisMonthTx.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
-      const totalExpense = thisMonthTx.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
-      
-      const categories: Record<string, number> = {};
-      thisMonthTx.filter(tx => tx.type === 'expense').forEach(tx => {
-        categories[tx.category] = (categories[tx.category] || 0) + tx.amount;
-      });
-
-      const response = await fetch('/api/insights', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          totalIncome,
-          totalExpense,
-          categories,
-          upcomingBillsCount: bills.filter(b => !isPast(new Date(b.nextDueDate))).length
-        })
-      });
-      
-      const data = await response.json();
-      setInsights(data.insights);
-    } catch (error) {
-      console.error("Failed to generate insights", error);
-      setInsights("Failed to generate insights. Please try again later.");
-    } finally {
-      setLoadingInsights(false);
+    if (!loading && user) {
+      router.replace('/dashboard');
     }
-  };
+  }, [user, loading, router]);
 
-  if (loading) return <div className="p-8">Loading...</div>;
-
-  if (!user) {
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
-        <h1 className="text-4xl font-bold tracking-tight">Welcome to Finance AI</h1>
-        <p className="text-lg text-gray-500 max-w-md">
-          Track your income, manage recurring bills, and get AI-powered insights on your spending habits.
-        </p>
-        <Button size="lg" onClick={loginWithGoogle}>
-          <LogIn className="w-5 h-5 mr-2" />
-          Get Started with Google
-        </Button>
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="text-sm text-gray-500">Loading...</div>
       </div>
     );
   }
 
-  // Calculate totals for this month
-  const thisMonthTx = transactions.filter(tx => isThisMonth(new Date(tx.date)));
-  const income = thisMonthTx.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
-  const expenses = thisMonthTx.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
-  const balance = income - expenses;
-
-  // Upcoming bills
-  const upcomingBills = bills
-    .filter(b => !isPast(new Date(b.nextDueDate)) || isToday(new Date(b.nextDueDate)))
-    .slice(0, 4);
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-gray-500">Welcome back, {user.displayName || 'User'}!</p>
-      </div>
-    <Sidebar />
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Balance (This Month)</CardTitle>
-            <Wallet className="h-4 w-4 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
-              {balance >= 0 ? '+' : ''}{balance.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Income (This Month)</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {income.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Expenses (This Month)</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {expenses.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+    <main className="min-h-screen flex items-center justify-center px-6 py-12">
+      <div className="w-full max-w-5xl grid gap-10 lg:grid-cols-2 items-center">
+        <div className="space-y-6">
+          <div className="inline-flex items-center rounded-full border bg-white px-3 py-1 text-sm text-gray-600 shadow-sm">
+            <Sparkles className="w-4 h-4 mr-2 text-blue-500" />
+            Your personal finance copilot
+          </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>AI Insights</CardTitle>
-            <CardDescription>Get personalized advice based on your spending.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {insights ? (
-              <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">
-                {insights}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 space-y-4 text-center">
-                <Sparkles className="w-8 h-8 text-blue-500" />
-                <p className="text-sm text-gray-500 max-w-xs">
-                  Analyze your current month&apos;s spending to find savings opportunities.
-                </p>
-                <Button onClick={generateInsights} disabled={loadingInsights}>
-                  {loadingInsights ? 'Analyzing...' : 'Generate Insights'}
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Upcoming Bills</CardTitle>
-            <CardDescription>Your next due payments.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {upcomingBills.length === 0 ? (
-              <p className="text-sm text-gray-500">No upcoming bills.</p>
-            ) : (
-              <div className="space-y-4">
-                {upcomingBills.map((bill, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium leading-none">{bill.name}</p>
-                      <p className="text-sm text-gray-500">{format(new Date(bill.nextDueDate), 'MMM d, yyyy')}</p>
-                    </div>
-                    <div className="font-medium">
-                      {bill.expectedAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          <div className="space-y-4">
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
+              Finance AI
+            </h1>
+            <p className="text-lg text-gray-600 max-w-xl">
+              Track transactions, manage recurring bills, monitor budgets, and
+              get AI-powered insights on your spending habits.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button size="lg" onClick={loginWithGoogle}>
+              <LogIn className="w-5 h-5 mr-2" />
+              Sign in with Google
+            </Button>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border bg-white p-6 shadow-sm">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl border p-4">
+              <Wallet className="w-5 h-5 mb-3 text-gray-700" />
+              <h2 className="font-semibold">Track balances</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                See income, expenses, and your monthly net at a glance.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border p-4">
+              <Receipt className="w-5 h-5 mb-3 text-gray-700" />
+              <h2 className="font-semibold">Manage spending</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Organize transactions and understand where your money goes.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border p-4">
+              <CalendarSync className="w-5 h-5 mb-3 text-gray-700" />
+              <h2 className="font-semibold">Stay ahead of bills</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Keep recurring payments visible before they sneak up on you.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
