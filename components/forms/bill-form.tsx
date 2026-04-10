@@ -145,7 +145,7 @@ export function BillForm() {
                         {...field}
                         placeholder="Rent, Netflix, Spotify"
                         autoComplete="off"
-                        className="h-11 rounded-xl"
+                        className="h-11 rounded-md"
                       />
                     </FormControl>
                     <FormMessage />
@@ -162,7 +162,7 @@ export function BillForm() {
                       <FormLabel>Type</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
-                          <SelectTrigger className="h-11 w-full rounded-xl">
+                          <SelectTrigger className="h-11 w-full rounded-md">
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
                         </FormControl>
@@ -185,7 +185,7 @@ export function BillForm() {
                       <FormLabel>Frequency</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
-                          <SelectTrigger className="h-11 w-full rounded-xl">
+                          <SelectTrigger className="h-11 w-full rounded-md">
                             <SelectValue placeholder="Select frequency" />
                           </SelectTrigger>
                         </FormControl>
@@ -219,7 +219,7 @@ export function BillForm() {
                             step="0.01"
                             min="0"
                             placeholder="0.00"
-                            className="h-11 rounded-xl pl-8"
+                            className="h-11 rounded-md pl-8"
                             {...field}
                           />
                         </div>
@@ -240,7 +240,7 @@ export function BillForm() {
                           <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
                             type="date"
-                            className="h-11 rounded-xl pl-10"
+                            className="h-11 rounded-md pl-10"
                             {...field}
                           />
                         </div>
@@ -257,14 +257,14 @@ export function BillForm() {
                   variant="outline"
                   onClick={() => setOpen(false)}
                   disabled={isSubmitting}
-                  className="rounded-xl"
+                  className="rounded-md"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="rounded-xl"
+                  className="rounded-md"
                 >
                   {isSubmitting ? 'Saving...' : 'Save bill'}
                 </Button>
