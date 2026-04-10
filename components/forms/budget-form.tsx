@@ -129,7 +129,7 @@ export function BudgetForm() {
                         {...field}
                         placeholder="Food & Dining"
                         autoComplete="off"
-                        className="h-11 rounded-md"
+                        className="h-11"
                       />
                     </FormControl>
                     <FormMessage />
@@ -155,7 +155,7 @@ export function BudgetForm() {
                           step="0.01"
                           min="0"
                           placeholder="0.00"
-                          className="h-11 rounded-md pl-8"
+                          className="h-11 pl-8"
                         />
                       </div>
                     </FormControl>
@@ -170,7 +170,7 @@ export function BudgetForm() {
                   variant="outline"
                   onClick={() => setOpen(false)}
                   disabled={isSubmitting}
-                  className="rounded-md"
+                  className=""
                 >
                   Cancel
                 </Button>

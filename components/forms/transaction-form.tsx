@@ -148,7 +148,7 @@ export function TransactionForm() {
                       <FormLabel>Type</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
-                          <SelectTrigger className="h-11 w-full rounded-md">
+                          <SelectTrigger className="h-11 w-full">
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
                         </FormControl>
@@ -180,7 +180,7 @@ export function TransactionForm() {
                             step="0.01"
                             min="0"
                             placeholder="0.00"
-                            className="h-11 rounded-md pl-8"
+                            className="h-11 pl-8"
                           />
                         </div>
                       </FormControl>
@@ -202,7 +202,7 @@ export function TransactionForm() {
                           {...field}
                           placeholder="Groceries, Salary, Rent"
                           autoComplete="off"
-                          className="h-11 rounded-md"
+                          className="h-11"
                         />
                       </FormControl>
                       <FormMessage />
@@ -221,7 +221,7 @@ export function TransactionForm() {
                           <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
                             type="date"
-                            className="h-11 rounded-md pl-10"
+                            className="h-11 pl-10"
                             {...field}
                           />
                         </div>
@@ -243,7 +243,7 @@ export function TransactionForm() {
                         {...field}
                         placeholder="Brief description"
                         autoComplete="off"
-                        className="h-11 rounded-md"
+                        className="h-11"
                       />
                     </FormControl>
                     <FormMessage />
@@ -257,7 +257,7 @@ export function TransactionForm() {
                   variant="outline"
                   onClick={() => setOpen(false)}
                   disabled={isSubmitting}
-                  className="rounded-md"
+                  className=""
                 >
                   Cancel
                 </Button>
@@ -265,7 +265,7 @@ export function TransactionForm() {
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="rounded-md"
+                  className=""
                 >
                   {isSubmitting ? 'Saving...' : 'Save transaction'}
                 </Button>
