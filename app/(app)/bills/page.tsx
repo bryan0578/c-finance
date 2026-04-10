@@ -39,6 +39,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { BillForm } from '@/components/forms/bill-form';
 import { Input } from '@/components/ui/input';
+import { EditBillDialog } from '@/components/forms/edit-bill-dialog';
+
 import {
   Select,
   SelectContent,
@@ -174,7 +176,7 @@ function advanceDueDate(current: Date, frequency: BillFrequency) {
 
 export default function BillsPage() {
   const { user } = useAuth();
-
+  
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -182,7 +184,7 @@ export default function BillsPage() {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [frequencyFilter, setFrequencyFilter] = useState<FrequencyFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-
+  
   useEffect(() => {
     if (!user) return;
 
@@ -310,6 +312,8 @@ export default function BillsPage() {
 
   if (!user) return null;
 
+  const userId = user.uid;
+
   function renderBillCard(bill: Bill) {
     const dueDate = parseBillDate(bill.nextDueDate);
     const status = getBillStatus(bill);
@@ -373,33 +377,37 @@ export default function BillsPage() {
 
           <div className="flex items-center justify-between gap-3">
             <span
-              className={`text-sm ${
+                className={`text-sm ${
                 status === 'overdue'
-                  ? 'text-red-600 font-medium'
-                  : status === 'due-soon'
+                    ? 'text-red-600 font-medium'
+                    : status === 'due-soon'
                     ? 'text-amber-700 font-medium'
                     : 'text-muted-foreground'
-              }`}
+                }`}
             >
-              {subtitle}
+                {subtitle}
             </span>
 
-            {status === 'paid' ? (
-              <span className="inline-flex items-center text-sm font-medium text-green-600">
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Paid
-              </span>
-            ) : (
-              <Button
-                variant={status === 'overdue' || status === 'due-soon' ? 'default' : 'outline'}
-                size="sm"
-                className="rounded-md"
-                onClick={() => handleMarkPaid(bill)}
-              >
-                Mark Paid
-              </Button>
-            )}
-          </div>
+            <div className="flex items-center gap-2">
+                <EditBillDialog userId={userId} bill={bill} />
+
+                {status === 'paid' ? (
+                <span className="inline-flex items-center text-sm font-medium text-green-600">
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Paid
+                </span>
+                ) : (
+                <Button
+                    variant={status === 'overdue' || status === 'due-soon' ? 'default' : 'outline'}
+                    size="sm"
+                    className="rounded-md"
+                    onClick={() => handleMarkPaid(bill)}
+                >
+                    Mark Paid
+                </Button>
+                )}
+            </div>
+            </div>
         </CardContent>
       </Card>
     );
