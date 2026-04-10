@@ -178,7 +178,7 @@ export function BudgetForm() {
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="rounded-md"
+                  className=""
                 >
                   {isSubmitting ? 'Saving...' : 'Save budget'}
                 </Button>
