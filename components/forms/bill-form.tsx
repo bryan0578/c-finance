@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Plus, CalendarDays, Landmark } from 'lucide-react';
-import { collection, addDoc } from 'firebase/firestore';
+import { Plus, CalendarDays } from 'lucide-react';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
 import { useAuth } from '@/components/auth-provider';
 import { db } from '@/lib/firebase';
@@ -39,10 +39,15 @@ import {
 } from '@/components/ui/select';
 
 const formSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(50, 'Name is too long'),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Bill name is required')
+    .max(50, 'Bill name must be 50 characters or less'),
   type: z.enum(['fixed', 'variable', 'subscription']),
   expectedAmount: z.coerce
     .number()
+    .finite('Amount must be a valid number')
     .min(0, 'Amount must be 0 or greater'),
   frequency: z.enum(['weekly', 'monthly', 'yearly']),
   nextDueDate: z.string().min(1, 'Next due date is required'),
@@ -66,6 +71,7 @@ export function BillForm() {
   const form = useForm<BillFormInput, unknown, BillFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues,
+    mode: 'onSubmit',
   });
 
   const isSubmitting = form.formState.isSubmitting;
@@ -78,13 +84,13 @@ export function BillForm() {
     try {
       await addDoc(collection(db, path), {
         uid: user.uid,
-        name: values.name.trim(),
+        name: values.name,
         type: values.type,
         expectedAmount: values.expectedAmount,
         frequency: values.frequency,
-        nextDueDate: new Date(values.nextDueDate).toISOString(),
+        nextDueDate: values.nextDueDate,
         autoPay: false,
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
       });
 
       form.reset(defaultValues);
@@ -94,27 +100,29 @@ export function BillForm() {
     }
   }
 
-  const handleOpenChange = (nextOpen: boolean) => {
+  function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
 
     if (!nextOpen) {
       form.reset(defaultValues);
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={<Button className="gap-2" />}>
-        <Plus className="h-4 w-4" />
-        Add Bill
+      <DialogTrigger asChild>
+        <Button className="gap-2">
+          <Plus className="h-4 w-4" />
+          Add Bill
+        </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[560px] p-0 overflow-hidden rounded-2xl">
+      <DialogContent className="overflow-hidden rounded-2xl p-0 sm:max-w-[560px]">
         <DialogHeader className="border-b px-6 py-5">
           <DialogTitle className="text-xl">Add recurring bill</DialogTitle>
           <DialogDescription className="pt-1 text-sm text-muted-foreground">
-            Save a fixed bill, variable expense, or subscription so you can keep
-            upcoming payments visible.
+            Save a fixed bill, variable expense, or subscription so upcoming
+            payments stay visible.
           </DialogDescription>
         </DialogHeader>
 
@@ -129,9 +137,9 @@ export function BillForm() {
                     <FormLabel>Bill name</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Rent, Netflix, Spotify"
-                        autoComplete="off"
                         {...field}
+                        autoComplete="off"
+                        placeholder="Rent, Netflix, Spotify"
                       />
                     </FormControl>
                     <FormMessage />
@@ -146,10 +154,7 @@ export function BillForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Type</FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                      >
+                      <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select type" />
@@ -172,10 +177,7 @@ export function BillForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Frequency</FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                      >
+                      <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select frequency" />
@@ -202,22 +204,29 @@ export function BillForm() {
                       <FormLabel>Expected amount</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Landmark className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                            $
+                          </span>
                           <Input
                             type="number"
+                            inputMode="decimal"
                             step="0.01"
                             min="0"
                             placeholder="0.00"
-                            className="pl-10"
+                            className="pl-8"
                             name={field.name}
                             ref={field.ref}
                             onBlur={field.onBlur}
                             value={
-                              typeof field.value === 'number' ? field.value : ''
+                              typeof field.value === 'number' ||
+                              typeof field.value === 'string'
+                                ? field.value
+                                : ''
                             }
-                            onChange={(event) =>
-                              field.onChange(event.currentTarget.value)
-                            }
+                            onChange={(event) => {
+                              const value = event.currentTarget.value;
+                              field.onChange(value === '' ? '' : value);
+                            }}
                           />
                         </div>
                       </FormControl>
@@ -235,11 +244,7 @@ export function BillForm() {
                       <FormControl>
                         <div className="relative">
                           <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                          <Input
-                            type="date"
-                            className="pl-10"
-                            {...field}
-                          />
+                          <Input type="date" className="pl-10" {...field} />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -253,11 +258,12 @@ export function BillForm() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setOpen(false)}
                     disabled={isSubmitting}
+                    onClick={() => setOpen(false)}
                   >
                     Cancel
                   </Button>
+
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? 'Saving...' : 'Save bill'}
                   </Button>
