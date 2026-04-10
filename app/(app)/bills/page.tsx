@@ -16,6 +16,7 @@ import {
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   orderBy,
@@ -243,6 +244,24 @@ export default function BillsPage() {
     }
   }
 
+  async function handleDeleteBill(billId: string) {
+    if (!user) return;
+  
+    const confirmed = window.confirm(
+      'Delete this bill? This action cannot be undone.'
+    );
+  
+    if (!confirmed) return;
+  
+    const path = `users/${userId}/recurring/${billId}`;
+  
+    try {
+      await deleteDoc(doc(db, path));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  }
+
   const filteredBills = useMemo(() => {
     const q = search.trim().toLowerCase();
 
@@ -375,38 +394,43 @@ export default function BillsPage() {
             {formatCurrency(bill.expectedAmount)}
           </div>
 
-          <div className="flex items-center justify-between gap-3">
-            <span
-                className={`text-sm ${
-                status === 'overdue'
-                    ? 'text-red-600 font-medium'
-                    : status === 'due-soon'
-                    ? 'text-amber-700 font-medium'
-                    : 'text-muted-foreground'
-                }`}
-            >
-                {subtitle}
-            </span>
-
-            <div className="flex items-center gap-2">
-                <EditBillDialog userId={userId} bill={bill} />
-
-                {status === 'paid' ? (
-                <span className="inline-flex items-center text-sm font-medium text-green-600">
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Paid
-                </span>
-                ) : (
-                <Button
-                    variant={status === 'overdue' || status === 'due-soon' ? 'default' : 'outline'}
-                    size="sm"
-                    className="rounded-md"
-                    onClick={() => handleMarkPaid(bill)}
+            <div className="flex items-center justify-between gap-3">
+                <span
+                    className={`text-sm ${
+                    status === 'overdue'
+                        ? 'text-red-600 font-medium'
+                        : status === 'due-soon'
+                        ? 'text-amber-700 font-medium'
+                        : 'text-muted-foreground'
+                    }`}
                 >
-                    Mark Paid
-                </Button>
-                )}
-            </div>
+                    {subtitle}
+                </span>
+
+                <div className="flex items-center gap-2">
+                    <EditBillDialog userId={userId} bill={bill} />
+
+                    <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-md text-red-600 hover:text-red-700"
+                    onClick={() => handleDeleteBill(bill.id)}
+                    >
+                    Delete
+                    </Button>
+
+                    {status !== 'paid' && (
+                    <Button
+                        variant={status === 'overdue' || status === 'due-soon' ? 'default' : 'outline'}
+                        size="sm"
+                        className="rounded-md"
+                        onClick={() => handleMarkPaid(bill)}
+                    >
+                        Mark Paid
+                    </Button>
+                    )}
+                </div>
             </div>
         </CardContent>
       </Card>
