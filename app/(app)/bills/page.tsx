@@ -30,6 +30,7 @@ import {
   Search,
   AlertTriangle,
   Wallet,
+  Trash2
 } from 'lucide-react';
 
 import { useAuth } from '@/components/auth-provider';
@@ -411,13 +412,14 @@ export default function BillsPage() {
                     <EditBillDialog userId={userId} bill={bill} />
 
                     <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="rounded-md text-red-600 hover:text-red-700"
-                    onClick={() => handleDeleteBill(bill.id)}
-                    >
-                    Delete
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="rounded-md text-red-600 hover:text-red-700"
+                        onClick={() => handleDeleteBill(bill.id)}
+                        >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
                     </Button>
 
                     {status !== 'paid' && (
