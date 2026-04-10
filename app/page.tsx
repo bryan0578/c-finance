@@ -63,7 +63,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-
+    
         <div className="mx-auto mt-14 grid w-full max-w-5xl gap-4 md:grid-cols-3">
           <div className="rounded-3xl border border-gray-200 bg-gray-50 p-6 shadow-sm">
             <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm">
