@@ -21,9 +21,9 @@ export default function AppLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex">
+      <div className="h-screen overflow-hidden flex bg-gray-50">
         <div className="hidden md:block w-64 shrink-0 border-r bg-white" />
-        <div className="flex-1 p-8">Loading...</div>
+        <div className="flex-1 overflow-y-auto p-8">Loading...</div>
       </div>
     );
   }
@@ -33,9 +33,11 @@ export default function AppLayout({
   }
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="h-screen overflow-hidden flex bg-gray-50">
       <Sidebar />
-      <main className="flex-1 min-w-0 p-6 md:p-8">{children}</main>
+      <main className="flex-1 min-w-0 overflow-y-auto">
+        <div className="p-6 md:p-8">{children}</div>
+      </main>
     </div>
   );
 }
