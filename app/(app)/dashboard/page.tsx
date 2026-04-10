@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { TrendingUp, TrendingDown, Wallet, Sparkles } from 'lucide-react';
 import { format, isPast, isThisMonth, isToday } from 'date-fns';
+import { ExpenseChart } from '@/components/charts/expense-chart';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -185,7 +186,18 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
+      {/* Expense chart */}
+        <Card>
+            <CardHeader>
+            <CardTitle>Spending by category</CardTitle>
+            <CardDescription>
+                A breakdown of your expenses for this month.
+            </CardDescription>
+            </CardHeader>
+            <CardContent>
+            <ExpenseChart transactions={thisMonthTx} />
+            </CardContent>
+        </Card>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
