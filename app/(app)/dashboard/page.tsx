@@ -14,8 +14,9 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TrendingUp, TrendingDown, Wallet, Sparkles } from 'lucide-react';
-import { format, isPast, isThisMonth, isToday } from 'date-fns';
+import { format, subDays, isAfter, isPast, isThisMonth, isToday } from 'date-fns';
 import { ExpenseChart } from '@/components/charts/expense-chart';
+
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -57,20 +58,22 @@ export default function DashboardPage() {
     setLoadingInsights(true);
 
     try {
-      const thisMonthTx = transactions.filter((tx) =>
-        isThisMonth(new Date(tx.date))
-      );
+        const recentTx = transactions.filter((tx) => {
+            const txDate = new Date(tx.date);
+            const cutoff = subDays(new Date(), 30);
+            return txDate >= cutoff;
+          });
 
-      const totalIncome = thisMonthTx
+      const totalIncome = recentTx
         .filter((tx) => tx.type === 'income')
         .reduce((sum, tx) => sum + tx.amount, 0);
 
-      const totalExpense = thisMonthTx
+      const totalExpense = recentTx
         .filter((tx) => tx.type === 'expense')
         .reduce((sum, tx) => sum + tx.amount, 0);
 
       const categories: Record<string, number> = {};
-      thisMonthTx
+      recentTx
         .filter((tx) => tx.type === 'expense')
         .forEach((tx) => {
           categories[tx.category] = (categories[tx.category] || 0) + tx.amount;
@@ -99,17 +102,19 @@ export default function DashboardPage() {
     }
   };
 
-  const thisMonthTx = transactions.filter((tx) =>
-    isThisMonth(new Date(tx.date))
-  );
+  const recentTx = transactions.filter((tx) => {
+    const txDate = new Date(tx.date);
+    const cutoff = subDays(new Date(), 30);
+    return txDate >= cutoff;
+  });
 
-  const income = thisMonthTx
-    .filter((tx) => tx.type === 'income')
-    .reduce((sum, tx) => sum + tx.amount, 0);
+  const income = recentTx
+  .filter((tx) => tx.type === 'income')
+  .reduce((sum, tx) => sum + tx.amount, 0);
 
-  const expenses = thisMonthTx
-    .filter((tx) => tx.type === 'expense')
-    .reduce((sum, tx) => sum + tx.amount, 0);
+  const expenses = recentTx
+  .filter((tx) => tx.type === 'expense')
+  .reduce((sum, tx) => sum + tx.amount, 0);
 
   const balance = income - expenses;
 
@@ -195,7 +200,7 @@ export default function DashboardPage() {
             </CardDescription>
             </CardHeader>
             <CardContent>
-            <ExpenseChart transactions={thisMonthTx} />
+            <ExpenseChart transactions={recentTx} />
             </CardContent>
         </Card>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">

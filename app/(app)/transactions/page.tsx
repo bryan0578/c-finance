@@ -520,7 +520,7 @@ export default function TransactionsPage() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto border">
+              <div className="overflow-x-auto rounded-lg border">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/30 hover:bg-muted/30">
