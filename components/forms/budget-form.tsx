@@ -176,7 +176,7 @@ export function BudgetForm({ trigger }: BudgetFormProps) {
                   variant="outline"
                   onClick={() => setOpen(false)}
                   disabled={isSubmitting}
-                  className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50"
+                  className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
                 >
                   Cancel
                 </Button>
