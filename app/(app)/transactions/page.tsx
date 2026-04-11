@@ -676,7 +676,7 @@ export default function TransactionsPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className=""
+                    className="border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50"
                     disabled={currentPageSafe === totalPages}
                     onClick={() =>
                       setCurrentPage((prev) => Math.min(totalPages, prev + 1))
