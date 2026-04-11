@@ -598,7 +598,7 @@ export default function TransactionsPage() {
 
                             <TableCell>
                             <span
-                                className={`inline-flex rounded px-2 py-1 text-xs font-medium ${
+                                className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
                                 tx.type === 'income'
                                     ? 'bg-green-50 text-green-700'
                                     : 'bg-red-50 text-red-700'
@@ -610,7 +610,7 @@ export default function TransactionsPage() {
 
                             <TableCell>
                             <span
-                                className={`inline-flex rounded px-2 py-1 text-xs font-medium ${getCategoryChipClass(
+                                className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getCategoryChipClass(
                                 tx.category
                                 )}`}
                             >
