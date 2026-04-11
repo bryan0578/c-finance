@@ -19,11 +19,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   CalendarClock,
-  PiggyBank,
-  Plus,
-  Receipt,
   Sparkles,
-  Target,
   TrendingDown,
   TrendingUp,
   Wallet,
@@ -136,6 +132,13 @@ function getBillUrgency(
   if (diff < 0) return 'overdue';
   if (diff <= 7) return 'due-soon';
   return 'upcoming';
+}
+
+function getComparisonTone(value: number | null) {
+  if (value === null) return 'text-slate-500';
+  if (value > 0) return 'text-emerald-700';
+  if (value < 0) return 'text-rose-700';
+  return 'text-slate-500';
 }
 
 export default function DashboardPage() {
@@ -392,8 +395,8 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Dashboard</h1>
+          <p className="text-slate-500">
             Welcome back, {user.displayName || 'User'}!
           </p>
         </div>
@@ -402,7 +405,11 @@ export default function DashboardPage() {
           <Button
             type="button"
             variant={range === '7d' ? 'default' : 'outline'}
-            className="rounded-md"
+            className={
+              range === '7d'
+                ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
+                : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
+            }
             onClick={() => setRange('7d')}
           >
             7D
@@ -410,7 +417,11 @@ export default function DashboardPage() {
           <Button
             type="button"
             variant={range === '30d' ? 'default' : 'outline'}
-            className="rounded-md"
+            className={
+              range === '30d'
+                ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
+                : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
+            }
             onClick={() => setRange('30d')}
           >
             30D
@@ -418,7 +429,11 @@ export default function DashboardPage() {
           <Button
             type="button"
             variant={range === '90d' ? 'default' : 'outline'}
-            className="rounded-md"
+            className={
+              range === '90d'
+                ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
+                : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
+            }
             onClick={() => setRange('90d')}
           >
             90D
@@ -426,7 +441,11 @@ export default function DashboardPage() {
           <Button
             type="button"
             variant={range === 'ytd' ? 'default' : 'outline'}
-            className="rounded-md"
+            className={
+              range === 'ytd'
+                ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
+                : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
+            }
             onClick={() => setRange('ytd')}
           >
             YTD
@@ -434,14 +453,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <TransactionForm />
-        <BillForm />
-        <BudgetForm />
-      </div>
-
       {(overdueBills.length > 0 || dueSoonBills.length > 0) && (
-        <Card className="rounded-lg border-amber-200 bg-amber-50/60">
+        <Card className="rounded-lg border border-amber-200 bg-amber-50/70 shadow-sm">
           <CardContent className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-700" />
@@ -456,7 +469,7 @@ export default function DashboardPage() {
             </div>
             <Button
               variant="outline"
-              className="rounded-md border-amber-300 bg-white"
+              className="rounded-md border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
               onClick={() => router.push('/bills')}
             >
               View Bills
@@ -466,19 +479,21 @@ export default function DashboardPage() {
       )}
 
       <div className="grid gap-4 md:grid-cols-5">
-        <Card className="rounded-lg">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-slate-600">
               Net Balance ({getRangeLabel(range)})
             </CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-indigo-50 text-indigo-700">
+              <Wallet className="h-4 w-4" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${balance >= 0 ? 'text-foreground' : 'text-red-600'}`}>
+            <div className="text-2xl font-bold text-slate-900">
               {balance >= 0 ? '+' : ''}
               {formatCurrency(balance)}
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className={`mt-1 text-xs ${getComparisonTone(balanceChange)}`}>
               {balanceChange === null
                 ? 'No previous comparison'
                 : `${balanceChange >= 0 ? '+' : ''}${balanceChange.toFixed(1)}% vs previous period`}
@@ -486,18 +501,20 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-slate-600">
               Income ({getRangeLabel(range)})
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-500" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
+              <TrendingUp className="h-4 w-4" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-2xl font-bold text-slate-900">
               {formatCurrency(income)}
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className={`mt-1 text-xs ${getComparisonTone(incomeChange)}`}>
               {incomeChange === null
                 ? 'No previous comparison'
                 : `${incomeChange >= 0 ? '+' : ''}${incomeChange.toFixed(1)}% vs previous period`}
@@ -505,18 +522,20 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-slate-600">
               Expenses ({getRangeLabel(range)})
             </CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-500" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-rose-50 text-rose-700">
+              <TrendingDown className="h-4 w-4" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+            <div className="text-2xl font-bold text-slate-900">
               {formatCurrency(expenses)}
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className={`mt-1 text-xs ${getComparisonTone(expenseChange)}`}>
               {expenseChange === null
                 ? 'No previous comparison'
                 : `${expenseChange >= 0 ? '+' : ''}${expenseChange.toFixed(1)}% vs previous period`}
@@ -524,57 +543,67 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-600">
               Savings Rate
             </CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-indigo-50 text-indigo-700">
+              <Sparkles className="h-4 w-4" />
+            </div>
           </CardHeader>
           <CardContent>
             {savingsRate === null ? (
-              <p className="text-sm text-muted-foreground">No income in selected range.</p>
+              <p className="text-sm text-slate-500">No income in selected range.</p>
             ) : (
               <>
-                <div className={`text-2xl font-bold ${savingsRate >= 0 ? 'text-foreground' : 'text-red-600'}`}>
+                <div className="text-2xl font-bold text-slate-900">
                   {savingsRate.toFixed(1)}%
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {(income - expenses) >= 0 ? 'You saved part of your income.' : 'Expenses exceeded income.'}
+                <p className="mt-1 text-xs text-slate-500">
+                  {income - expenses >= 0
+                    ? 'You saved part of your income.'
+                    : 'Expenses exceeded income.'}
                 </p>
               </>
             )}
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-600">
               Top Spending Category
             </CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-sky-50 text-sky-700">
+              <Wallet className="h-4 w-4" />
+            </div>
           </CardHeader>
           <CardContent>
             {topCategory ? (
               <>
-                <div className="text-2xl font-bold">{topCategory.name}</div>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <div className="text-2xl font-bold text-slate-900">
+                  {topCategory.name}
+                </div>
+                <p className="mt-1 text-sm text-slate-500">
                   {formatCurrency(topCategory.total)} spent
                 </p>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">No expense data yet.</p>
+              <p className="text-sm text-slate-500">No expense data yet.</p>
             )}
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-7">
-        <Card className="rounded-lg lg:col-span-4">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm lg:col-span-4">
           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle>
+              <CardTitle className="text-slate-900">
                 {chartView === 'category' ? 'Spending by Category' : 'Expense Trend'}
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-slate-500">
                 {chartView === 'category'
                   ? `Expense breakdown for ${getRangeLabel(range).toLowerCase()}.`
                   : `Expense movement over ${getRangeLabel(range).toLowerCase()}.`}
@@ -585,7 +614,11 @@ export default function DashboardPage() {
               <Button
                 type="button"
                 variant={chartView === 'category' ? 'default' : 'outline'}
-                className="rounded-md"
+                className={
+                  chartView === 'category'
+                    ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
+                    : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
+                }
                 onClick={() => setChartView('category')}
               >
                 Category
@@ -593,7 +626,11 @@ export default function DashboardPage() {
               <Button
                 type="button"
                 variant={chartView === 'trend' ? 'default' : 'outline'}
-                className="rounded-md"
+                className={
+                  chartView === 'trend'
+                    ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
+                    : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
+                }
                 onClick={() => setChartView('trend')}
               >
                 Trend
@@ -609,17 +646,17 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg lg:col-span-3">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm lg:col-span-3">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Recent Transactions</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-slate-900">Recent Transactions</CardTitle>
+              <CardDescription className="text-slate-500">
                 Your latest account activity.
               </CardDescription>
             </div>
             <Button
               variant="outline"
-              className="rounded-md"
+              className="rounded-md border-slate-200 text-slate-700 hover:bg-slate-50"
               onClick={() => router.push('/transactions')}
             >
               View All
@@ -627,23 +664,21 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {recentTransactions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No transactions yet.
-              </p>
+              <p className="text-sm text-slate-500">No transactions yet.</p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {recentTransactions.map((tx, index) => {
                   const txDate = parseDate(tx.date);
                   return (
                     <div
                       key={`${tx.id ?? tx.note ?? tx.category}-${index}`}
-                      className="flex items-center justify-between gap-3 rounded-md p-2 transition-colors hover:bg-muted/40"
+                      className="flex items-center justify-between gap-3 rounded-md border border-transparent p-2 transition-colors hover:border-slate-200 hover:bg-slate-50"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">
+                        <p className="truncate text-sm font-medium text-slate-900">
                           {tx.note || tx.category}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-slate-500">
                           {tx.category}
                           {txDate ? ` • ${format(txDate, 'MMM d, yyyy')}` : ''}
                         </p>
@@ -651,17 +686,17 @@ export default function DashboardPage() {
 
                       <div
                         className={`shrink-0 text-sm font-medium ${
-                          tx.type === 'income' ? 'text-green-600' : 'text-foreground'
+                          tx.type === 'income' ? 'text-emerald-700' : 'text-slate-900'
                         }`}
                       >
                         {tx.type === 'income' ? (
                           <span className="inline-flex items-center">
-                            <ArrowUpRight className="mr-1 h-4 w-4" />
+                            <ArrowUpRight className="mr-1 h-4 w-4 text-emerald-600" />
                             {formatCurrency(tx.amount)}
                           </span>
                         ) : (
                           <span className="inline-flex items-center">
-                            <ArrowDownRight className="mr-1 h-4 w-4" />
+                            <ArrowDownRight className="mr-1 h-4 w-4 text-slate-500" />
                             {formatCurrency(tx.amount)}
                           </span>
                         )}
@@ -676,35 +711,49 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-7">
-        <Card className="rounded-lg lg:col-span-4">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm lg:col-span-4">
           <CardHeader>
-            <CardTitle>AI Insights</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-slate-900">AI Insights</CardTitle>
+            <CardDescription className="text-slate-500">
               Personalized observations based on your spending.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {insights ? (
               <div className="space-y-3">
-                <div className="rounded-md bg-muted/40 p-4 text-sm leading-6 text-foreground whitespace-pre-wrap">
+                <div className="rounded-md bg-slate-50 p-4 text-sm leading-6 text-slate-800 whitespace-pre-wrap">
                   {insights}
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" className="rounded-md" onClick={() => setInsights('')}>
+                  <Button
+                    variant="outline"
+                    className="rounded-md border-slate-200 text-slate-700 hover:bg-slate-50"
+                    onClick={() => setInsights('')}
+                  >
                     Clear
                   </Button>
-                  <Button className="rounded-md" onClick={generateInsights} disabled={loadingInsights}>
+                  <Button
+                    className="rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+                    onClick={generateInsights}
+                    disabled={loadingInsights}
+                  >
                     {loadingInsights ? 'Refreshing...' : 'Refresh Insights'}
                   </Button>
                 </div>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Sparkles className="mb-4 h-8 w-8 text-blue-500" />
-                <p className="max-w-xs text-sm text-muted-foreground">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-700">
+                  <Sparkles className="h-6 w-6" />
+                </div>
+                <p className="max-w-xs text-sm text-slate-500">
                   Analyze your recent spending to find patterns and savings opportunities.
                 </p>
-                <Button className="mt-4 rounded-md" onClick={generateInsights} disabled={loadingInsights}>
+                <Button
+                  className="mt-4 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+                  onClick={generateInsights}
+                  disabled={loadingInsights}
+                >
                   {loadingInsights ? 'Analyzing...' : 'Generate Insights'}
                 </Button>
               </div>
@@ -712,15 +761,17 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg lg:col-span-3">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm lg:col-span-3">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Upcoming Bills</CardTitle>
-              <CardDescription>Your next due payments.</CardDescription>
+              <CardTitle className="text-slate-900">Upcoming Bills</CardTitle>
+              <CardDescription className="text-slate-500">
+                Your next due payments.
+              </CardDescription>
             </div>
             <Button
               variant="outline"
-              className="rounded-md"
+              className="rounded-md border-slate-200 text-slate-700 hover:bg-slate-50"
               onClick={() => router.push('/bills')}
             >
               View All
@@ -728,9 +779,9 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {upcomingBills.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No upcoming bills.</p>
+              <p className="text-sm text-slate-500">No upcoming bills.</p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {upcomingBills.map((bill, i) => {
                   const dueDate = parseDate(bill.nextDueDate);
                   const urgency = getBillUrgency(bill);
@@ -738,17 +789,19 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={`${bill.id ?? bill.name}-${i}`}
-                      className="flex items-center justify-between gap-3 rounded-md p-2 transition-colors hover:bg-muted/40"
+                      className="flex items-center justify-between gap-3 rounded-md border border-transparent p-2 transition-colors hover:border-slate-200 hover:bg-slate-50"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{bill.name}</p>
+                        <p className="truncate text-sm font-medium text-slate-900">
+                          {bill.name}
+                        </p>
                         <p
                           className={`text-xs ${
                             urgency === 'overdue'
-                              ? 'text-red-600'
+                              ? 'text-rose-700'
                               : urgency === 'due-soon'
                                 ? 'text-amber-700'
-                                : 'text-muted-foreground'
+                                : 'text-slate-500'
                           }`}
                         >
                           <span className="inline-flex items-center">
@@ -758,7 +811,7 @@ export default function DashboardPage() {
                         </p>
                       </div>
 
-                      <div className="text-sm font-medium">
+                      <div className="text-sm font-medium text-slate-900">
                         {formatCurrency(Number(bill.expectedAmount || 0))}
                       </div>
                     </div>
@@ -771,17 +824,17 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-7">
-        <Card className="rounded-lg lg:col-span-4">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm lg:col-span-4">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Budget Snapshot</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-slate-900">Budget Snapshot</CardTitle>
+              <CardDescription className="text-slate-500">
                 How your current spending compares to your budgets.
               </CardDescription>
             </div>
             <Button
               variant="outline"
-              className="rounded-md"
+              className="rounded-md border-slate-200 text-slate-700 hover:bg-slate-50"
               onClick={() => router.push('/budgets')}
             >
               View Budgets
@@ -789,7 +842,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {budgetSnapshot.top.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-500">
                 No budgets yet. Create one to start tracking spending limits.
               </p>
             ) : (
@@ -801,32 +854,34 @@ export default function DashboardPage() {
                     <div key={`${budget.id ?? budget.category}-${index}`} className="space-y-2">
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{budget.category}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="truncate text-sm font-medium text-slate-900">
+                            {budget.category}
+                          </p>
+                          <p className="text-xs text-slate-500">
                             {formatCurrency(budget.spent)} of {formatCurrency(budget.limit)}
                           </p>
                         </div>
                         <div
                           className={`text-xs font-medium ${
                             budget.percent > 100
-                              ? 'text-red-600'
+                              ? 'text-rose-700'
                               : budget.percent >= 80
                                 ? 'text-amber-700'
-                                : 'text-muted-foreground'
+                                : 'text-slate-500'
                           }`}
                         >
                           {budget.percent.toFixed(0)}%
                         </div>
                       </div>
 
-                      <div className="h-2 rounded-full bg-muted">
+                      <div className="h-2 rounded-full bg-slate-100">
                         <div
                           className={`h-2 rounded-full transition-all ${
                             budget.percent > 100
-                              ? 'bg-red-500'
+                              ? 'bg-rose-500'
                               : budget.percent >= 80
                                 ? 'bg-amber-500'
-                                : 'bg-primary'
+                                : 'bg-indigo-600'
                           }`}
                           style={{ width: `${progress}%` }}
                         />
@@ -836,7 +891,7 @@ export default function DashboardPage() {
                 })}
 
                 {budgetSnapshot.overBudgetCount > 0 && (
-                  <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
                     {budgetSnapshot.overBudgetCount} budget
                     {budgetSnapshot.overBudgetCount > 1 ? 's are' : ' is'} over limit.
                   </div>
@@ -846,10 +901,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg lg:col-span-3">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm lg:col-span-3">
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-slate-900">Quick Actions</CardTitle>
+            <CardDescription className="text-slate-500">
               Add new activity without leaving the dashboard.
             </CardDescription>
           </CardHeader>

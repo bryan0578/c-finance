@@ -126,7 +126,7 @@ export function Sidebar() {
               className="w-full justify-start rounded-md border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
               onClick={handleLogout}
             >
-              <LogOut className="mr-2 h-4 w-4" />
+              <LogOut className="mr-2 h-4 w-4 cursor" />
               Log out
             </Button>
           </div>
