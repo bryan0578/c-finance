@@ -2,14 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  addDays,
   addMonths,
   addWeeks,
   addYears,
   differenceInCalendarDays,
   format,
-  isPast,
-  isToday,
   parseISO,
   startOfDay,
 } from 'date-fns';
@@ -25,24 +22,25 @@ import {
 } from 'firebase/firestore';
 import {
   CalendarClock,
-  CheckCircle2,
-  Clock3,
   Search,
-  AlertTriangle,
-  Wallet,
-  Trash2
+  Trash2,
 } from 'lucide-react';
 
 import { useAuth } from '@/components/auth-provider';
 import { db } from '@/lib/firebase';
 import { handleFirestoreError, OperationType } from '@/lib/firestore-error';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BillForm } from '@/components/forms/bill-form';
 import { Input } from '@/components/ui/input';
 import { EditBillDialog } from '@/components/forms/edit-bill-dialog';
-
 import {
   Select,
   SelectContent,
@@ -53,7 +51,7 @@ import {
 
 type BillType = 'fixed' | 'variable' | 'subscription';
 type BillFrequency = 'weekly' | 'monthly' | 'yearly';
-type BillStatus = 'overdue' | 'due-soon' | 'upcoming' | 'paid';
+type BillStatus = 'overdue' | 'due-soon' | 'upcoming';
 
 interface Bill {
   id: string;
@@ -69,7 +67,6 @@ type FrequencyFilter = 'all' | BillFrequency;
 type StatusFilter = 'all' | BillStatus;
 
 const DUE_SOON_DAYS = 7;
-const PAID_VISUAL_DAYS = 10;
 
 function formatCurrency(value: number) {
   return value.toLocaleString('en-US', {
@@ -112,11 +109,6 @@ function getBillStatus(bill: Bill): BillStatus {
   const due = startOfDay(dueDate);
   const dayDiff = differenceInCalendarDays(due, today);
 
-  const isDueOrPast = isPast(due) || isToday(due);
-  const visuallyPaid =
-    !isDueOrPast && dayDiff > PAID_VISUAL_DAYS;
-
-  if (visuallyPaid) return 'paid';
   if (dayDiff < 0) return 'overdue';
   if (dayDiff <= DUE_SOON_DAYS) return 'due-soon';
   return 'upcoming';
@@ -130,21 +122,17 @@ function getStatusLabel(status: BillStatus) {
       return 'Due soon';
     case 'upcoming':
       return 'Upcoming';
-    case 'paid':
-      return 'Paid';
   }
 }
 
 function getStatusBadgeClass(status: BillStatus) {
   switch (status) {
     case 'overdue':
-      return 'bg-red-50 text-red-700 ring-red-200';
+      return 'bg-rose-50 text-rose-700 ring-rose-200';
     case 'due-soon':
       return 'bg-amber-50 text-amber-700 ring-amber-200';
     case 'upcoming':
-      return 'bg-blue-50 text-blue-700 ring-blue-200';
-    case 'paid':
-      return 'bg-green-50 text-green-700 ring-green-200';
+      return 'bg-sky-50 text-sky-700 ring-sky-200';
   }
 }
 
@@ -153,7 +141,7 @@ function getTypeBadgeClass(type: BillType) {
     case 'fixed':
       return 'bg-slate-50 text-slate-700 ring-slate-200';
     case 'variable':
-      return 'bg-orange-50 text-orange-700 ring-orange-200';
+      return 'bg-amber-50 text-amber-700 ring-amber-200';
     case 'subscription':
       return 'bg-purple-50 text-purple-700 ring-purple-200';
   }
@@ -162,7 +150,7 @@ function getTypeBadgeClass(type: BillType) {
 function getFrequencyBadgeClass(frequency: BillFrequency) {
   switch (frequency) {
     case 'weekly':
-      return 'bg-blue-50 text-blue-700 ring-blue-200';
+      return 'bg-sky-50 text-sky-700 ring-sky-200';
     case 'monthly':
       return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
     case 'yearly':
@@ -178,7 +166,7 @@ function advanceDueDate(current: Date, frequency: BillFrequency) {
 
 export default function BillsPage() {
   const { user } = useAuth();
-  
+
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -186,7 +174,7 @@ export default function BillsPage() {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [frequencyFilter, setFrequencyFilter] = useState<FrequencyFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  
+
   useEffect(() => {
     if (!user) return;
 
@@ -214,79 +202,75 @@ export default function BillsPage() {
     return () => unsubscribe();
   }, [user]);
 
-  async function handleMarkPaid(bill: Bill) {
-    if (!user) return;
+  const userId = user?.uid ?? '';
 
-    try {
-      const txPath = `users/${user.uid}/transactions`;
-      await addDoc(collection(db, txPath), {
-        uid: user.uid,
-        type: 'expense',
-        amount: bill.expectedAmount,
-        category: bill.name,
-        date: new Date().toISOString().split('T')[0],
-        note: `Paid ${bill.name}`,
-        linkedRecurringId: bill.id,
-      });
+async function handleMarkPaid(bill: Bill) {
+  if (!user) return;
 
-      const dueDate = parseBillDate(bill.nextDueDate) ?? new Date();
-      const nextDate = advanceDueDate(dueDate, bill.frequency);
+  try {
+    const txPath = `users/${userId}/transactions`;
+    await addDoc(collection(db, txPath), {
+      uid: userId,
+      type: 'expense',
+      amount: bill.expectedAmount,
+      category: bill.name,
+      date: new Date().toISOString().split('T')[0],
+      note: `Paid ${bill.name}`,
+      linkedRecurringId: bill.id,
+    });
 
-      const billRef = doc(db, `users/${user.uid}/recurring`, bill.id);
-      await updateDoc(billRef, {
-        nextDueDate: nextDate.toISOString(),
-      });
-    } catch (error) {
-      handleFirestoreError(
-        error,
-        OperationType.WRITE,
-        `users/${user.uid}/recurring/${bill.id}`
-      );
-    }
-  }
+    const dueDate = parseBillDate(bill.nextDueDate) ?? new Date();
+    const nextDate = advanceDueDate(dueDate, bill.frequency);
 
-  async function handleDeleteBill(billId: string) {
-    if (!user) return;
-  
-    const confirmed = window.confirm(
-      'Delete this bill? This action cannot be undone.'
+    const billRef = doc(db, `users/${userId}/recurring`, bill.id);
+    await updateDoc(billRef, {
+      nextDueDate: nextDate.toISOString(),
+    });
+  } catch (error) {
+    handleFirestoreError(
+      error,
+      OperationType.WRITE,
+      `users/${userId}/recurring/${bill.id}`
     );
-  
-    if (!confirmed) return;
-  
-    const path = `users/${userId}/recurring/${billId}`;
-  
-    try {
-      await deleteDoc(doc(db, path));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, path);
-    }
   }
+}
+
+async function handleDeleteBill(billId: string) {
+  if (!user) return;
+
+  const confirmed = window.confirm(
+    'Delete this bill? This action cannot be undone.'
+  );
+
+  if (!confirmed) return;
+
+  const path = `users/${userId}/recurring/${billId}`;
+
+  try {
+    await deleteDoc(doc(db, path));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
 
   const filteredBills = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const queryValue = search.trim().toLowerCase();
 
     return bills.filter((bill) => {
       const status = getBillStatus(bill);
 
       const matchesSearch =
-        !q ||
-        bill.name.toLowerCase().includes(q) ||
-        bill.type.toLowerCase().includes(q) ||
-        bill.frequency.toLowerCase().includes(q);
+        !queryValue ||
+        bill.name.toLowerCase().includes(queryValue) ||
+        bill.type.toLowerCase().includes(queryValue) ||
+        bill.frequency.toLowerCase().includes(queryValue);
 
       const matchesType = typeFilter === 'all' || bill.type === typeFilter;
       const matchesFrequency =
         frequencyFilter === 'all' || bill.frequency === frequencyFilter;
-      const matchesStatus =
-        statusFilter === 'all' || status === statusFilter;
+      const matchesStatus = statusFilter === 'all' || status === statusFilter;
 
-      return (
-        matchesSearch &&
-        matchesType &&
-        matchesFrequency &&
-        matchesStatus
-      );
+      return matchesSearch && matchesType && matchesFrequency && matchesStatus;
     });
   }, [bills, search, typeFilter, frequencyFilter, statusFilter]);
 
@@ -295,7 +279,6 @@ export default function BillsPage() {
       overdue: filteredBills.filter((bill) => getBillStatus(bill) === 'overdue'),
       dueSoon: filteredBills.filter((bill) => getBillStatus(bill) === 'due-soon'),
       upcoming: filteredBills.filter((bill) => getBillStatus(bill) === 'upcoming'),
-      paid: filteredBills.filter((bill) => getBillStatus(bill) === 'paid'),
     };
   }, [filteredBills]);
 
@@ -314,7 +297,7 @@ export default function BillsPage() {
       (bill) => getBillStatus(bill) === 'due-soon'
     ).length;
 
-    const upcomingAmount = bills
+    const remainingAmount = bills
       .filter((bill) => {
         const status = getBillStatus(bill);
         return status === 'overdue' || status === 'due-soon' || status === 'upcoming';
@@ -326,13 +309,9 @@ export default function BillsPage() {
       totalMonthlyEquivalent,
       overdueCount,
       dueSoonCount,
-      upcomingAmount,
+      remainingAmount,
     };
   }, [bills]);
-
-  if (!user) return null;
-
-  const userId = user.uid;
 
   function renderBillCard(bill: Bill) {
     const dueDate = parseBillDate(bill.nextDueDate);
@@ -340,9 +319,7 @@ export default function BillsPage() {
 
     let subtitle = 'No due date';
     if (dueDate) {
-      if (status === 'paid') {
-        subtitle = 'Paid for this period';
-      } else if (status === 'overdue') {
+      if (status === 'overdue') {
         subtitle = `Overdue since ${format(dueDate, 'MMM d, yyyy')}`;
       } else if (status === 'due-soon') {
         subtitle = `Due ${format(dueDate, 'MMM d, yyyy')}`;
@@ -354,24 +331,24 @@ export default function BillsPage() {
     return (
       <Card
         key={bill.id}
-        className={`rounded-lg transition-colors ${
-          status === 'paid' ? 'opacity-80' : ''
-        }`}
+        className="rounded-lg border border-slate-200 bg-white shadow-sm transition-colors"
       >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <CardTitle className="truncate text-lg">{bill.name}</CardTitle>
+              <CardTitle className="truncate text-lg text-slate-900">
+                {bill.name}
+              </CardTitle>
               <CardDescription className="mt-2 flex flex-wrap gap-2">
                 <span
-                  className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ring-1 ${getTypeBadgeClass(
+                  className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ring-1 ${getTypeBadgeClass(
                     bill.type
                   )}`}
                 >
                   {bill.type}
                 </span>
                 <span
-                  className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ring-1 ${getFrequencyBadgeClass(
+                  className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ring-1 ${getFrequencyBadgeClass(
                     bill.frequency
                   )}`}
                 >
@@ -381,7 +358,7 @@ export default function BillsPage() {
             </div>
 
             <span
-              className={`inline-flex shrink-0 rounded-md px-2 py-1 text-xs font-medium ring-1 ${getStatusBadgeClass(
+              className={`inline-flex shrink-0 rounded-full px-2 py-1 text-xs font-medium ring-1 ${getStatusBadgeClass(
                 status
               )}`}
             >
@@ -391,49 +368,52 @@ export default function BillsPage() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="text-3xl font-semibold">
+          <div className="text-3xl font-semibold text-slate-900">
             {formatCurrency(bill.expectedAmount)}
           </div>
 
-            <div className="flex items-center justify-between gap-3">
-                <span
-                    className={`text-sm ${
-                    status === 'overdue'
-                        ? 'text-red-600 font-medium'
-                        : status === 'due-soon'
-                        ? 'text-amber-700 font-medium'
-                        : 'text-muted-foreground'
-                    }`}
-                >
-                    {subtitle}
-                </span>
+          <div className="flex items-center justify-between gap-3">
+            <span
+              className={`text-sm ${
+                status === 'overdue'
+                  ? 'font-medium text-rose-700'
+                  : status === 'due-soon'
+                    ? 'font-medium text-amber-700'
+                    : 'text-slate-500'
+              }`}
+            >
+              {subtitle}
+            </span>
 
-                <div className="flex items-center gap-2">
-                    <EditBillDialog userId={userId} bill={bill} />
+            <div className="flex items-center gap-2">
+              <EditBillDialog userId={userId} bill={bill} />
 
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="rounded-md border-rose-200 bg-white text-rose-700 hover:bg-rose-50 hover:text-rose-800"
-                        onClick={() => handleDeleteBill(bill.id)}
-                        >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                    </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-md border-rose-200 bg-white text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                onClick={() => handleDeleteBill(bill.id)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
 
-                    {status !== 'paid' && (
-                    <Button
-                        variant={status === 'overdue' || status === 'due-soon' ? 'default' : 'outline'}
-                        size="sm"
-                        className="rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
-                        onClick={() => handleMarkPaid(bill)}
-                    >
-                        Mark Paid
-                    </Button>
-                    )}
-                </div>
+              <Button
+                type="button"
+                variant={status === 'overdue' || status === 'due-soon' ? 'default' : 'outline'}
+                size="sm"
+                className={
+                  status === 'overdue' || status === 'due-soon'
+                    ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
+                    : 'rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800'
+                }
+                onClick={() => handleMarkPaid(bill)}
+              >
+                Mark Paid
+              </Button>
             </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -445,8 +425,10 @@ export default function BillsPage() {
     return (
       <section className="space-y-4">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <h2 className="text-lg font-semibold tracking-tight text-slate-900">
+            {title}
+          </h2>
+          <p className="text-sm text-slate-500">{description}</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -460,88 +442,98 @@ export default function BillsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Bills & Subscriptions</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+            Bills & Subscriptions
+          </h1>
+          <p className="text-slate-500">
             Track recurring expenses, spot what is due next, and stay ahead of payments.
           </p>
         </div>
 
-        <BillForm />
+        <BillForm
+          trigger={
+            <Button className="rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+              Add Bill
+            </Button>
+          }
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="rounded-lg">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-slate-500">
               Total recurring bills
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">{summary.totalCount}</div>
+            <div className="text-2xl font-semibold text-slate-900">
+              {summary.totalCount}
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-slate-500">
               Monthly equivalent
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">
+            <div className="text-2xl font-semibold text-slate-900">
               {formatCurrency(summary.totalMonthlyEquivalent)}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-slate-500">
               Overdue / due soon
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">
+            <div className="text-2xl font-semibold text-slate-900">
               {summary.overdueCount + summary.dueSoonCount}
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-slate-500">
               {summary.overdueCount} overdue, {summary.dueSoonCount} due soon
             </p>
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-slate-500">
               Remaining amount
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">
-              {formatCurrency(summary.upcomingAmount)}
+            <div className="text-2xl font-semibold text-slate-900">
+              {formatCurrency(summary.remainingAmount)}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="rounded-lg">
+      <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
         <CardHeader className="space-y-4">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <CardTitle>Bill manager</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-slate-900">Bill manager</CardTitle>
+              <CardDescription className="text-slate-500">
                 Search and filter recurring charges by type, frequency, or status.
               </CardDescription>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <div className="relative min-w-[240px]">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search bills"
-                  className="h-10 rounded-md pl-9"
+                  className="h-10 rounded-md border-slate-200 pl-9 text-slate-900 placeholder:text-slate-400"
                 />
               </div>
 
@@ -549,7 +541,7 @@ export default function BillsPage() {
                 value={typeFilter}
                 onValueChange={(value) => setTypeFilter(value as TypeFilter)}
               >
-                <SelectTrigger className="h-10 w-[160px] rounded-md">
+                <SelectTrigger className="h-10 w-[160px] rounded-md border-slate-200 bg-white text-slate-900">
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -566,7 +558,7 @@ export default function BillsPage() {
                   setFrequencyFilter(value as FrequencyFilter)
                 }
               >
-                <SelectTrigger className="h-10 w-[170px] rounded-md">
+                <SelectTrigger className="h-10 w-[170px] rounded-md border-slate-200 bg-white text-slate-900">
                   <SelectValue placeholder="Frequency" />
                 </SelectTrigger>
                 <SelectContent>
@@ -581,7 +573,7 @@ export default function BillsPage() {
                 value={statusFilter}
                 onValueChange={(value) => setStatusFilter(value as StatusFilter)}
               >
-                <SelectTrigger className="h-10 w-[160px] rounded-md">
+                <SelectTrigger className="h-10 w-[160px] rounded-md border-slate-200 bg-white text-slate-900">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -589,7 +581,6 @@ export default function BillsPage() {
                   <SelectItem value="overdue">Overdue</SelectItem>
                   <SelectItem value="due-soon">Due soon</SelectItem>
                   <SelectItem value="upcoming">Upcoming</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -598,28 +589,34 @@ export default function BillsPage() {
 
         <CardContent>
           {loading ? (
-            <div className="py-8 text-center text-muted-foreground">
+            <div className="py-8 text-center text-slate-500">
               Loading recurring bills...
             </div>
           ) : bills.length === 0 ? (
             <div className="py-10 text-center">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-500">
                 No recurring bills yet. Add your first one to start tracking future expenses.
               </p>
               <div className="mt-4 flex justify-center">
-                <BillForm />
+                <BillForm
+                  trigger={
+                    <Button className="rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+                      Add Bill
+                    </Button>
+                  }
+                />
               </div>
             </div>
           ) : filteredBills.length === 0 ? (
             <div className="py-10 text-center">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-500">
                 No bills match your current filters.
               </p>
               <div className="mt-4 flex justify-center">
                 <Button
                   type="button"
                   variant="outline"
-                  className="rounded-md"
+                  className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
                   onClick={() => {
                     setSearch('');
                     setTypeFilter('all');
@@ -649,12 +646,6 @@ export default function BillsPage() {
                 'Upcoming',
                 'Bills that are coming up later.',
                 sections.upcoming
-              )}
-
-              {renderSection(
-                'Paid',
-                'Bills that appear covered for the current cycle.',
-                sections.paid
               )}
             </div>
           )}
