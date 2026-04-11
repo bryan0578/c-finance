@@ -71,7 +71,11 @@ const defaultValues: BillFormInput = {
   nextDueDate: new Date().toISOString().split('T')[0],
 };
 
-export function BillForm() {
+type BillFormProps = {
+    trigger?: React.ReactNode;
+  };
+  
+export function BillForm({ trigger }: BillFormProps) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
 
@@ -113,12 +117,14 @@ export function BillForm() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="h-20 flex-col gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50">
-            <Plus className="h-5 w-5" />
-            Add Bill
-        </Button>
-      </DialogTrigger>
+        <DialogTrigger asChild>
+            {trigger ?? (
+                <Button className="gap-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+                <Plus className="h-4 w-4" />
+                Add Bill
+                </Button>
+            )}
+        </DialogTrigger>
 
       <DialogContent className="sm:max-w-[620px] rounded-2xl p-0">
         <div className="px-6 pt-6 pb-4">

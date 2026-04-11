@@ -23,6 +23,7 @@ import {
   TrendingDown,
   TrendingUp,
   Wallet,
+  Plus
 } from 'lucide-react';
 
 import { useAuth } from '@/components/auth-provider';
@@ -908,11 +909,43 @@ export default function DashboardPage() {
               Add new activity without leaving the dashboard.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-3">
-            <TransactionForm />
-            <BillForm />
-            <BudgetForm />
-          </CardContent>
+          <CardContent className="grid gap-3 sm:grid-cols-3">
+                <TransactionForm
+                    trigger={
+                    <Button
+                        variant="outline"
+                        className="h-24 w-full flex-col gap-2 rounded-lg border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50"
+                    >
+                        <Plus className="h-5 w-5" />
+                        Add Transaction
+                    </Button>
+                    }
+                />
+
+                <BillForm
+                    trigger={
+                    <Button
+                        variant="outline"
+                        className="h-24 w-full flex-col gap-2 rounded-lg border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50"
+                    >
+                        <Plus className="h-5 w-5" />
+                        Add Bill
+                    </Button>
+                    }
+                />
+
+                <BudgetForm
+                    trigger={
+                    <Button
+                        variant="outline"
+                        className="h-24 w-full flex-col gap-2 rounded-lg border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50"
+                    >
+                        <Plus className="h-5 w-5" />
+                        Create Budget
+                    </Button>
+                    }
+                />
+            </CardContent>
         </Card>
       </div>
     </div>
