@@ -73,8 +73,12 @@ const formSchema = z.object({
     date: new Date().toISOString().split('T')[0],
     note: '',
   };
+  type TransactionFormProps = {
+    trigger?: React.ReactNode;
+  };
+  
+export function TransactionForm({ trigger }: TransactionFormProps) {
 
-export function TransactionForm() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
 
@@ -118,12 +122,14 @@ export function TransactionForm() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="h-20 flex-col gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50">
-            <Plus className="h-5 w-5" />
-            Add Transaction
-        </Button>
-      </DialogTrigger>
+        <DialogTrigger asChild>
+            {trigger ?? (
+                <Button className="gap-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+                <Plus className="h-4 w-4" />
+                Add Transaction
+                </Button>
+            )}
+        </DialogTrigger>
 
       <DialogContent className="p-0 sm:max-w-[560px] rounded-xl">
         <div className="px-6 pt-6 pb-4">
