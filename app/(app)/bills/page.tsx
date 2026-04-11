@@ -415,7 +415,7 @@ export default function BillsPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="rounded-md text-red-600 hover:text-red-700"
+                        className="rounded-md border-rose-200 bg-white text-rose-700 hover:bg-rose-50 hover:text-rose-800"
                         onClick={() => handleDeleteBill(bill.id)}
                         >
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -426,7 +426,7 @@ export default function BillsPage() {
                     <Button
                         variant={status === 'overdue' || status === 'due-soon' ? 'default' : 'outline'}
                         size="sm"
-                        className="rounded-md"
+                        className="rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
                         onClick={() => handleMarkPaid(bill)}
                     >
                         Mark Paid
