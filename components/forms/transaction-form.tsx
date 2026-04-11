@@ -119,9 +119,9 @@ export function TransactionForm() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Transaction
+        <Button className="w-full justify-start rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Transaction
         </Button>
       </DialogTrigger>
 
