@@ -55,15 +55,17 @@ import {
 
 type BillType = 'fixed' | 'variable' | 'subscription';
 type BillFrequency = 'weekly' | 'monthly' | 'yearly';
-type BillStatus = 'overdue' | 'due-soon' | 'upcoming';
+type BillStatus = 'overdue' | 'due-soon' | 'upcoming' | 'paid';
 
 interface Bill {
-  id: string;
-  name: string;
-  type: BillType;
-  expectedAmount: number;
-  frequency: BillFrequency;
-  nextDueDate: string;
+    id: string;
+    name: string;
+    type: BillType;
+    expectedAmount: number;
+    frequency: BillFrequency;
+    nextDueDate: string;
+    lastPaidDate?: string;
+    lastPaidTransactionId?: string;
 }
 
 type TypeFilter = 'all' | BillType;
@@ -89,33 +91,61 @@ function parseBillDate(value: string) {
 }
 
 function normalizeBill(raw: any): Bill {
-  return {
-    id: String(raw.id ?? ''),
-    name: String(raw.name ?? 'Untitled Bill'),
-    type:
-      raw.type === 'variable' || raw.type === 'subscription'
-        ? raw.type
-        : 'fixed',
-    expectedAmount: Number(raw.expectedAmount ?? 0),
-    frequency:
-      raw.frequency === 'weekly' || raw.frequency === 'yearly'
-        ? raw.frequency
-        : 'monthly',
-    nextDueDate: String(raw.nextDueDate ?? ''),
-  };
+    return {
+        id: String(raw.id ?? ''),
+        name: String(raw.name ?? 'Untitled Bill'),
+        type:
+            raw.type === 'variable' || raw.type === 'subscription'
+            ? raw.type
+            : 'fixed',
+        expectedAmount: Number(raw.expectedAmount ?? 0),
+        frequency:
+            raw.frequency === 'weekly' || raw.frequency === 'yearly'
+            ? raw.frequency
+            : 'monthly',
+        nextDueDate: String(raw.nextDueDate ?? ''),
+        lastPaidDate: raw.lastPaidDate ? String(raw.lastPaidDate) : undefined,
+        lastPaidTransactionId: raw.lastPaidTransactionId
+            ? String(raw.lastPaidTransactionId)
+            : undefined,
+    };
 }
 
+function isBillPaidForCurrentCycle(bill: Bill) {
+    if (!bill.lastPaidDate) return false;
+  
+    const paidDate = parseBillDate(bill.lastPaidDate);
+    const dueDate = parseBillDate(bill.nextDueDate);
+  
+    if (!paidDate || !dueDate) return false;
+  
+    switch (bill.frequency) {
+      case 'weekly':
+        return differenceInCalendarDays(dueDate, paidDate) <= 7;
+      case 'monthly':
+        return (
+          paidDate.getFullYear() === dueDate.getFullYear() &&
+          paidDate.getMonth() === dueDate.getMonth()
+        );
+      case 'yearly':
+        return paidDate.getFullYear() === dueDate.getFullYear();
+      default:
+        return false;
+    }
+}
 function getBillStatus(bill: Bill): BillStatus {
-  const dueDate = parseBillDate(bill.nextDueDate);
-  if (!dueDate) return 'upcoming';
-
-  const today = startOfDay(new Date());
-  const due = startOfDay(dueDate);
-  const dayDiff = differenceInCalendarDays(due, today);
-
-  if (dayDiff < 0) return 'overdue';
-  if (dayDiff <= DUE_SOON_DAYS) return 'due-soon';
-  return 'upcoming';
+    if (isBillPaidForCurrentCycle(bill)) return 'paid';
+  
+    const dueDate = parseBillDate(bill.nextDueDate);
+    if (!dueDate) return 'upcoming';
+  
+    const today = startOfDay(new Date());
+    const due = startOfDay(dueDate);
+    const dayDiff = differenceInCalendarDays(due, today);
+  
+    if (dayDiff < 0) return 'overdue';
+    if (dayDiff <= DUE_SOON_DAYS) return 'due-soon';
+    return 'upcoming';
 }
 
 function getStatusLabel(status: BillStatus) {
@@ -126,18 +156,22 @@ function getStatusLabel(status: BillStatus) {
       return 'Due soon';
     case 'upcoming':
       return 'Upcoming';
+    case 'paid':
+        return 'Paid';
   }
 }
 
 function getStatusBadgeClass(status: BillStatus) {
-  switch (status) {
-    case 'overdue':
-      return 'bg-rose-50 text-rose-700 ring-rose-200';
-    case 'due-soon':
-      return 'bg-amber-50 text-amber-700 ring-amber-200';
-    case 'upcoming':
-      return 'bg-sky-50 text-sky-700 ring-sky-200';
-  }
+    switch (status) {
+      case 'overdue':
+        return 'bg-rose-50 text-rose-700 ring-rose-200';
+      case 'due-soon':
+        return 'bg-amber-50 text-amber-700 ring-amber-200';
+      case 'upcoming':
+        return 'bg-sky-50 text-sky-700 ring-sky-200';
+      case 'paid':
+        return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
+    }
 }
 
 function getTypeBadgeClass(type: BillType) {
@@ -161,17 +195,21 @@ function getFrequencyBadgeClass(frequency: BillFrequency) {
       return 'bg-indigo-50 text-indigo-700 ring-indigo-200';
   }
 }
+
 function getBillCardClass(status: BillStatus) {
     switch (status) {
       case 'overdue':
         return 'border-rose-200 bg-rose-50/40';
       case 'due-soon':
         return 'border-amber-200 bg-amber-50/40';
+      case 'paid':
+        return 'border-emerald-200 bg-emerald-50/40';
       case 'upcoming':
       default:
         return 'border-slate-200 bg-white';
     }
 }
+
 function advanceDueDate(current: Date, frequency: BillFrequency) {
   if (frequency === 'weekly') return addWeeks(current, 1);
   if (frequency === 'yearly') return addYears(current, 1);
@@ -218,35 +256,31 @@ export default function BillsPage() {
 
   const userId = user?.uid ?? '';
 
-async function handleMarkPaid(bill: Bill) {
-  if (!user) return;
-
-  try {
-    const txPath = `users/${userId}/transactions`;
-    await addDoc(collection(db, txPath), {
-      uid: userId,
-      type: 'expense',
-      amount: bill.expectedAmount,
-      category: bill.name,
-      date: new Date().toISOString().split('T')[0],
-      note: `Paid ${bill.name}`,
-      linkedRecurringId: bill.id,
-    });
-
-    const dueDate = parseBillDate(bill.nextDueDate) ?? new Date();
-    const nextDate = advanceDueDate(dueDate, bill.frequency);
-
-    const billRef = doc(db, `users/${userId}/recurring`, bill.id);
-    await updateDoc(billRef, {
-      nextDueDate: nextDate.toISOString(),
-    });
-  } catch (error) {
-    handleFirestoreError(
-      error,
-      OperationType.WRITE,
-      `users/${userId}/recurring/${bill.id}`
-    );
-  }
+  async function handleMarkPaid(bill: Bill) {
+    try {
+      const txPath = `users/${userId}/transactions`;
+      const createdTx = await addDoc(collection(db, txPath), {
+        uid: userId,
+        type: 'expense',
+        amount: bill.expectedAmount,
+        category: bill.name,
+        date: new Date().toISOString().split('T')[0],
+        note: `Paid ${bill.name}`,
+        linkedRecurringId: bill.id,
+      });
+  
+      const billRef = doc(db, `users/${userId}/recurring`, bill.id);
+      await updateDoc(billRef, {
+        lastPaidDate: new Date().toISOString().split('T')[0],
+        lastPaidTransactionId: createdTx.id,
+      });
+    } catch (error) {
+      handleFirestoreError(
+        error,
+        OperationType.WRITE,
+        `users/${userId}/recurring/${bill.id}`
+      );
+    }
 }
 
 async function handleDeleteBill(billId: string) {
@@ -293,6 +327,7 @@ async function handleDeleteBill(billId: string) {
       overdue: filteredBills.filter((bill) => getBillStatus(bill) === 'overdue'),
       dueSoon: filteredBills.filter((bill) => getBillStatus(bill) === 'due-soon'),
       upcoming: filteredBills.filter((bill) => getBillStatus(bill) === 'upcoming'),
+      paid: filteredBills.filter((bill) => getBillStatus(bill) === 'paid'),
     };
   }, [filteredBills]);
 
@@ -312,11 +347,11 @@ async function handleDeleteBill(billId: string) {
     ).length;
 
     const remainingAmount = bills
-      .filter((bill) => {
-        const status = getBillStatus(bill);
-        return status === 'overdue' || status === 'due-soon' || status === 'upcoming';
-      })
-      .reduce((sum, bill) => sum + bill.expectedAmount, 0);
+        .filter((bill) => {
+            const status = getBillStatus(bill);
+            return status === 'overdue' || status === 'due-soon' || status === 'upcoming';
+        })
+        .reduce((sum, bill) => sum + bill.expectedAmount, 0);
 
     return {
       totalCount: bills.length,
@@ -333,13 +368,17 @@ async function handleDeleteBill(billId: string) {
 
     let subtitle = 'No due date';
     if (dueDate) {
-      if (status === 'overdue') {
-        subtitle = `Overdue since ${format(dueDate, 'MMM d, yyyy')}`;
-      } else if (status === 'due-soon') {
-        subtitle = `Due ${format(dueDate, 'MMM d, yyyy')}`;
-      } else {
-        subtitle = `Next due ${format(dueDate, 'MMM d, yyyy')}`;
-      }
+        if (status === 'paid') {
+            subtitle = bill.lastPaidDate
+            ? `Paid on ${format(new Date(bill.lastPaidDate), 'MMM d, yyyy')}`
+            : 'Paid for this cycle';
+        } else if (status === 'overdue') {
+            subtitle = `Overdue since ${format(dueDate, 'MMM d, yyyy')}`;
+        } else if (status === 'due-soon') {
+            subtitle = `Due ${format(dueDate, 'MMM d, yyyy')}`;
+        } else {
+            subtitle = `Next due ${format(dueDate, 'MMM d, yyyy')}`;
+        }
     }
 
     return (
@@ -393,39 +432,43 @@ async function handleDeleteBill(billId: string) {
                         ? 'font-medium text-rose-700'
                         : status === 'due-soon'
                             ? 'font-medium text-amber-700'
+                            : status === 'paid'
+                            ? 'font-medium text-emerald-700'
                             : 'text-slate-500'
                     }`}
-                    >
+                >
                     {subtitle}
                 </span>
-            <div className="flex items-center gap-2">
-              <EditBillDialog userId={userId} bill={bill} />
+                <div className="flex items-center gap-2">
+                    <EditBillDialog userId={userId} bill={bill} />
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="rounded-md border-rose-200 bg-white text-rose-700 hover:bg-rose-50 hover:text-rose-800"
-                onClick={() => handleDeleteBill(bill.id)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="rounded-md border-rose-200 bg-white text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                        onClick={() => handleDeleteBill(bill.id)}
+                    >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                    </Button>
 
-              <Button
-                type="button"
-                variant={status === 'overdue' || status === 'due-soon' ? 'default' : 'outline'}
-                size="sm"
-                className={
-                  status === 'overdue' || status === 'due-soon'
-                    ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
-                    : 'rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800'
-                }
-                onClick={() => handleMarkPaid(bill)}
-              >
-                Mark Paid
-              </Button>
-            </div>
+                    {status !== 'paid' && (
+                        <Button
+                        type="button"
+                        variant={status === 'overdue' || status === 'due-soon' ? 'default' : 'outline'}
+                        size="sm"
+                        className={
+                            status === 'overdue' || status === 'due-soon'
+                            ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
+                            : 'rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800'
+                        }
+                        onClick={() => handleMarkPaid(bill)}
+                        >
+                        Mark Paid
+                        </Button>
+                    )}
+                </div>
           </div>
         </CardContent>
       </Card>
@@ -606,6 +649,7 @@ async function handleDeleteBill(billId: string) {
                   <SelectItem value="overdue">Overdue</SelectItem>
                   <SelectItem value="due-soon">Due soon</SelectItem>
                   <SelectItem value="upcoming">Upcoming</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -672,6 +716,11 @@ async function handleDeleteBill(billId: string) {
                 'Bills that are coming up later.',
                 sections.upcoming
               )}
+                {renderSection(
+                    'Paid',
+                    'Bills that have been marked as paid for the current cycle.',
+                    sections.paid
+                )}
             </div>
           )}
         </CardContent>
