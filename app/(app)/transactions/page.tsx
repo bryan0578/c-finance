@@ -101,13 +101,13 @@ function getCategoryChipClass(category: string) {
     return 'bg-orange-50 text-orange-700 ring-orange-200';
   }
   if (key.includes('rent') || key.includes('bill') || key.includes('util')) {
-    return 'bg-red-50 text-red-700 ring-red-200';
+    return 'bg-rose-50 text-rose-700 ring-rose-200';
   }
   if (key.includes('transport') || key.includes('gas') || key.includes('uber')) {
     return 'bg-blue-50 text-blue-700 ring-blue-200';
   }
   if (key.includes('salary') || key.includes('pay') || key.includes('income')) {
-    return 'bg-green-50 text-green-700 ring-green-200';
+    return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
   }
   if (
     key.includes('fun') ||
@@ -600,8 +600,8 @@ export default function TransactionsPage() {
                             <span
                                 className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
                                 tx.type === 'income'
-                                    ? 'bg-green-50 text-green-700'
-                                    : 'bg-red-50 text-red-700'
+                                    ? 'bg-emerald-50 text-emerald-600'
+                                    : 'bg-red-50 text-rose-800'
                                 }`}
                             >
                                 {tx.type === 'income' ? 'Income' : 'Expense'}
@@ -626,7 +626,7 @@ export default function TransactionsPage() {
 
                             <TableCell
                             className={`text-right font-medium ${
-                                tx.type === 'income' ? 'text-green-600' : 'text-foreground'
+                                tx.type === 'income' ? 'text-emerald-700' : 'text-foreground'
                             }`}
                             >
                             {tx.type === 'income' ? '+' : '-'}
@@ -643,7 +643,7 @@ export default function TransactionsPage() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="text-red-600 hover:text-red-700"
+                                className="text-rose-700 hover:text-rose-800"
                                 onClick={() => handleDeleteTransaction(tx.id)}
                                 >
                                 <Trash2 className="mr-2 h-4 w-4" />
@@ -667,7 +667,7 @@ export default function TransactionsPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className=""
+                    className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50"
                     disabled={currentPageSafe === 1}
                     onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   >
@@ -676,7 +676,7 @@ export default function TransactionsPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50"
+                    className="rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
                     disabled={currentPageSafe === totalPages}
                     onClick={() =>
                       setCurrentPage((prev) => Math.min(totalPages, prev + 1))

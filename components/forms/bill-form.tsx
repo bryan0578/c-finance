@@ -263,14 +263,14 @@ export function BillForm({ trigger }: BillFormProps) {
                   variant="outline"
                   onClick={() => setOpen(false)}
                   disabled={isSubmitting}
-                  className=""
+                  className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className=""
+                  className="rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
                 >
                   {isSubmitting ? 'Saving...' : 'Save bill'}
                 </Button>
