@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   format,
   isPast,
@@ -18,7 +19,11 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   CalendarClock,
+  PiggyBank,
+  Plus,
+  Receipt,
   Sparkles,
+  Target,
   TrendingDown,
   TrendingUp,
   Wallet,
@@ -37,9 +42,14 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ExpenseChart } from '@/components/charts/expense-chart';
+import { ExpenseTrendChart } from '@/components/charts/expense-trend-chart';
+import { TransactionForm } from '@/components/forms/transaction-form';
+import { BillForm } from '@/components/forms/bill-form';
+import { BudgetForm } from '@/components/forms/budget-form';
 
 type TransactionType = 'income' | 'expense';
 type DashboardRange = '7d' | '30d' | '90d' | 'ytd';
+type ChartView = 'category' | 'trend';
 
 interface Transaction {
   id?: string;
@@ -57,6 +67,13 @@ interface Bill {
   expectedAmount: number;
   frequency: 'weekly' | 'monthly' | 'yearly';
   nextDueDate: string;
+}
+
+interface Budget {
+  id?: string;
+  category: string;
+  limit: number;
+  period: 'monthly';
 }
 
 function formatCurrency(value: number) {
@@ -123,12 +140,15 @@ function getBillUrgency(
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const router = useRouter();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
   const [insights, setInsights] = useState<string>('');
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [range, setRange] = useState<DashboardRange>('30d');
+  const [chartView, setChartView] = useState<ChartView>('category');
 
   useEffect(() => {
     if (!user) return;
@@ -161,9 +181,24 @@ export default function DashboardPage() {
       (error) => handleFirestoreError(error, OperationType.LIST, billsPath)
     );
 
+    const budgetsPath = `users/${user.uid}/budgets`;
+    const qBudgets = query(collection(db, budgetsPath), orderBy('category', 'asc'));
+    const unsubBudgets = onSnapshot(
+      qBudgets,
+      (snapshot) => {
+        const items = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...(doc.data() as Omit<Budget, 'id'>),
+        }));
+        setBudgets(items);
+      },
+      (error) => handleFirestoreError(error, OperationType.LIST, budgetsPath)
+    );
+
     return () => {
       unsubTx();
       unsubBills();
+      unsubBudgets();
     };
   }, [user]);
 
@@ -231,6 +266,11 @@ export default function DashboardPage() {
   const incomeChange = getPercentChange(income, previousIncome);
   const expenseChange = getPercentChange(expenses, previousExpenses);
 
+  const savingsRate = useMemo(() => {
+    if (income <= 0) return null;
+    return ((income - expenses) / income) * 100;
+  }, [income, expenses]);
+
   const recentTransactions = useMemo(() => {
     return [...transactions].slice(0, 6);
   }, [transactions]);
@@ -249,9 +289,7 @@ export default function DashboardPage() {
     return bills
       .filter((b) => {
         const dueDate = parseDate(b.nextDueDate);
-        return dueDate
-          ? !isPast(dueDate) || isToday(dueDate)
-          : false;
+        return dueDate ? !isPast(dueDate) || isToday(dueDate) : false;
       })
       .slice(0, 4);
   }, [bills]);
@@ -274,6 +312,35 @@ export default function DashboardPage() {
       total: sorted[0][1],
     };
   }, [filteredTransactions]);
+
+  const budgetSnapshot = useMemo(() => {
+    const spendByCategory: Record<string, number> = {};
+
+    filteredTransactions
+      .filter((tx) => tx.type === 'expense')
+      .forEach((tx) => {
+        const category = tx.category || 'Other';
+        spendByCategory[category] = (spendByCategory[category] || 0) + Number(tx.amount || 0);
+      });
+
+    const enriched = budgets.map((budget) => {
+      const spent = spendByCategory[budget.category] || 0;
+      const percent = budget.limit > 0 ? (spent / budget.limit) * 100 : 0;
+
+      return {
+        ...budget,
+        spent,
+        percent,
+      };
+    });
+
+    const sorted = enriched.sort((a, b) => b.percent - a.percent);
+
+    return {
+      top: sorted.slice(0, 3),
+      overBudgetCount: enriched.filter((b) => b.percent > 100).length,
+    };
+  }, [budgets, filteredTransactions]);
 
   const generateInsights = async () => {
     setLoadingInsights(true);
@@ -367,6 +434,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        <TransactionForm />
+        <BillForm />
+        <BudgetForm />
+      </div>
+
       {(overdueBills.length > 0 || dueSoonBills.length > 0) && (
         <Card className="rounded-lg border-amber-200 bg-amber-50/60">
           <CardContent className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between">
@@ -381,14 +454,18 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-            <Button variant="outline" className="rounded-md border-amber-300 bg-white">
+            <Button
+              variant="outline"
+              className="rounded-md border-amber-300 bg-white"
+              onClick={() => router.push('/bills')}
+            >
               View Bills
             </Button>
           </CardContent>
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card className="rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -450,6 +527,28 @@ export default function DashboardPage() {
         <Card className="rounded-lg">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">
+              Savings Rate
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {savingsRate === null ? (
+              <p className="text-sm text-muted-foreground">No income in selected range.</p>
+            ) : (
+              <>
+                <div className={`text-2xl font-bold ${savingsRate >= 0 ? 'text-foreground' : 'text-red-600'}`}>
+                  {savingsRate.toFixed(1)}%
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {(income - expenses) >= 0 ? 'You saved part of your income.' : 'Expenses exceeded income.'}
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-lg">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">
               Top Spending Category
             </CardTitle>
           </CardHeader>
@@ -470,23 +569,61 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-7">
         <Card className="rounded-lg lg:col-span-4">
-          <CardHeader>
-            <CardTitle>Spending by Category</CardTitle>
-            <CardDescription>
-              Expense breakdown for {getRangeLabel(range).toLowerCase()}.
-            </CardDescription>
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle>
+                {chartView === 'category' ? 'Spending by Category' : 'Expense Trend'}
+              </CardTitle>
+              <CardDescription>
+                {chartView === 'category'
+                  ? `Expense breakdown for ${getRangeLabel(range).toLowerCase()}.`
+                  : `Expense movement over ${getRangeLabel(range).toLowerCase()}.`}
+              </CardDescription>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={chartView === 'category' ? 'default' : 'outline'}
+                className="rounded-md"
+                onClick={() => setChartView('category')}
+              >
+                Category
+              </Button>
+              <Button
+                type="button"
+                variant={chartView === 'trend' ? 'default' : 'outline'}
+                className="rounded-md"
+                onClick={() => setChartView('trend')}
+              >
+                Trend
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <ExpenseChart transactions={filteredTransactions} />
+            {chartView === 'category' ? (
+              <ExpenseChart transactions={filteredTransactions} />
+            ) : (
+              <ExpenseTrendChart transactions={filteredTransactions} />
+            )}
           </CardContent>
         </Card>
 
         <Card className="rounded-lg lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Recent Transactions</CardTitle>
-            <CardDescription>
-              Your latest account activity.
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Recent Transactions</CardTitle>
+              <CardDescription>
+                Your latest account activity.
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              className="rounded-md"
+              onClick={() => router.push('/transactions')}
+            >
+              View All
+            </Button>
           </CardHeader>
           <CardContent>
             {recentTransactions.length === 0 ? (
@@ -576,9 +713,18 @@ export default function DashboardPage() {
         </Card>
 
         <Card className="rounded-lg lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Upcoming Bills</CardTitle>
-            <CardDescription>Your next due payments.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Upcoming Bills</CardTitle>
+              <CardDescription>Your next due payments.</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              className="rounded-md"
+              onClick={() => router.push('/bills')}
+            >
+              View All
+            </Button>
           </CardHeader>
           <CardContent>
             {upcomingBills.length === 0 ? (
@@ -620,6 +766,97 @@ export default function DashboardPage() {
                 })}
               </div>
             )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-7">
+        <Card className="rounded-lg lg:col-span-4">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Budget Snapshot</CardTitle>
+              <CardDescription>
+                How your current spending compares to your budgets.
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              className="rounded-md"
+              onClick={() => router.push('/budgets')}
+            >
+              View Budgets
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {budgetSnapshot.top.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No budgets yet. Create one to start tracking spending limits.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {budgetSnapshot.top.map((budget, index) => {
+                  const progress = Math.min(budget.percent, 100);
+
+                  return (
+                    <div key={`${budget.id ?? budget.category}-${index}`} className="space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{budget.category}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatCurrency(budget.spent)} of {formatCurrency(budget.limit)}
+                          </p>
+                        </div>
+                        <div
+                          className={`text-xs font-medium ${
+                            budget.percent > 100
+                              ? 'text-red-600'
+                              : budget.percent >= 80
+                                ? 'text-amber-700'
+                                : 'text-muted-foreground'
+                          }`}
+                        >
+                          {budget.percent.toFixed(0)}%
+                        </div>
+                      </div>
+
+                      <div className="h-2 rounded-full bg-muted">
+                        <div
+                          className={`h-2 rounded-full transition-all ${
+                            budget.percent > 100
+                              ? 'bg-red-500'
+                              : budget.percent >= 80
+                                ? 'bg-amber-500'
+                                : 'bg-primary'
+                          }`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {budgetSnapshot.overBudgetCount > 0 && (
+                  <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {budgetSnapshot.overBudgetCount} budget
+                    {budgetSnapshot.overBudgetCount > 1 ? 's are' : ' is'} over limit.
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-lg lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>
+              Add new activity without leaving the dashboard.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <TransactionForm />
+            <BillForm />
+            <BudgetForm />
           </CardContent>
         </Card>
       </div>
