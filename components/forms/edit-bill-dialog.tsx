@@ -270,11 +270,11 @@ export function EditBillDialog({ userId, bill }: EditBillDialogProps) {
                   variant="outline"
                   onClick={() => setOpen(false)}
                   disabled={isSubmitting}
-                  className="rounded-md"
+                  className="cursor-pointer"
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting} className="rounded-md">
+                <Button type="submit" disabled={isSubmitting} className="cursor-pointer">
                   {isSubmitting ? 'Saving...' : 'Save changes'}
                 </Button>
               </div>

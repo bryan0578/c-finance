@@ -130,7 +130,7 @@ export function EditTransactionDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="">
+        <Button type="button" variant="outline" size="sm" className="cursor-pointer">
           <Pencil className="mr-2 h-4 w-4" />
           Edit
         </Button>
@@ -265,11 +265,11 @@ export function EditTransactionDialog({
                   variant="outline"
                   onClick={() => setOpen(false)}
                   disabled={isSubmitting}
-                  className=""
+                  className="cursor-pointer"
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting} className="">
+                <Button type="submit" disabled={isSubmitting} className="cursor-pointer">
                   {isSubmitting ? 'Saving...' : 'Save changes'}
                 </Button>
               </div>

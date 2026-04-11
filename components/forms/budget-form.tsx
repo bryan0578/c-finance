@@ -98,7 +98,7 @@ export function BudgetForm() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button className="w-full rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+        <Button className="w-full rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer">
             <Plus className="mr-2 h-4 w-4" />
             Create Budget
         </Button>

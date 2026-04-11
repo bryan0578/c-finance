@@ -126,16 +126,16 @@ export function Sidebar() {
               className="w-full justify-start rounded-md border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
               onClick={handleLogout}
             >
-              <LogOut className="mr-2 h-4 w-4 cursor" />
+              <LogOut className="mr-2 h-4 w-4 cursor-pointer" />
               Log out
             </Button>
           </div>
         ) : (
           <Button
-            className="w-full rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+            className="w-full rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
             onClick={handleLogin}
           >
-            <LogIn className="mr-2 h-4 w-4" />
+            <LogIn className="mr-2 h-4 w-4 cursor-pointer" />
             Sign in with Google
           </Button>
         )}
