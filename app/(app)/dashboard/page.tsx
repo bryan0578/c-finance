@@ -138,7 +138,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Net Balance (This Month)
+              Net Balance (Last 30 Days)
             </CardTitle>
             <Wallet className="h-4 w-4 text-gray-500" />
           </CardHeader>
@@ -160,7 +160,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Income (This Month)
+              Income (Last 30 Days)
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
@@ -177,7 +177,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Expenses (This Month)
+              Expenses (Last 30 Days)
             </CardTitle>
             <TrendingDown className="h-4 w-4 text-red-500" />
           </CardHeader>
@@ -196,7 +196,7 @@ export default function DashboardPage() {
             <CardHeader>
             <CardTitle>Spending by category</CardTitle>
             <CardDescription>
-                A breakdown of your expenses for this month.
+                Expense breakdown for the last 30 days.
             </CardDescription>
             </CardHeader>
             <CardContent>
