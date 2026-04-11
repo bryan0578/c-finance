@@ -407,7 +407,7 @@ export default function DashboardPage() {
             variant={range === '7d' ? 'default' : 'outline'}
             className={
               range === '7d'
-                ? 'w-full rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
+                ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
                 : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
             }
             onClick={() => setRange('7d')}
@@ -419,7 +419,7 @@ export default function DashboardPage() {
             variant={range === '30d' ? 'default' : 'outline'}
             className={
               range === '30d'
-                ? 'w-full rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
+                ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
                 : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
             }
             onClick={() => setRange('30d')}
@@ -431,7 +431,7 @@ export default function DashboardPage() {
             variant={range === '90d' ? 'default' : 'outline'}
             className={
               range === '90d'
-                ? 'w-full rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
+                ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
                 : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
             }
             onClick={() => setRange('90d')}
@@ -443,7 +443,7 @@ export default function DashboardPage() {
             variant={range === 'ytd' ? 'default' : 'outline'}
             className={
               range === 'ytd'
-                ? 'w-full rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
+                ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
                 : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
             }
             onClick={() => setRange('ytd')}
@@ -616,7 +616,7 @@ export default function DashboardPage() {
                 variant={chartView === 'category' ? 'default' : 'outline'}
                 className={
                   chartView === 'category'
-                    ? 'w-full rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
+                    ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
                     : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
                 }
                 onClick={() => setChartView('category')}
@@ -628,7 +628,7 @@ export default function DashboardPage() {
                 variant={chartView === 'trend' ? 'default' : 'outline'}
                 className={
                   chartView === 'trend'
-                    ? 'w-full rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
+                    ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
                     : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
                 }
                 onClick={() => setChartView('trend')}
@@ -733,7 +733,7 @@ export default function DashboardPage() {
                     Clear
                   </Button>
                   <Button
-                    className="w-full rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
+                    className="rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
                     onClick={generateInsights}
                     disabled={loadingInsights}
                   >
@@ -750,7 +750,7 @@ export default function DashboardPage() {
                   Analyze your recent spending to find patterns and savings opportunities.
                 </p>
                 <Button
-                  className="mt-4 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
+                  className="mt-4 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
                   onClick={generateInsights}
                   disabled={loadingInsights}
                 >

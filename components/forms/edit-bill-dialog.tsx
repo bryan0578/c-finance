@@ -128,7 +128,7 @@ export function EditBillDialog({ userId, bill }: EditBillDialogProps) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="w-full rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer">
+        <Button type="button" variant="outline" size="sm" className="rounded-md">
           <Pencil className="mr-2 h-4 w-4" />
           Edit
         </Button>
@@ -270,11 +270,11 @@ export function EditBillDialog({ userId, bill }: EditBillDialogProps) {
                   variant="outline"
                   onClick={() => setOpen(false)}
                   disabled={isSubmitting}
-                  className="cursor-pointer"
+                  className="rounded-md"
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting} className="w-full rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer">
+                <Button type="submit" disabled={isSubmitting} className="cursor-pointer">
                   {isSubmitting ? 'Saving...' : 'Save changes'}
                 </Button>
               </div>
