@@ -409,7 +409,7 @@ export default function DashboardPage() {
             className={
               range === '7d'
                 ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
-                : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
+                : 'rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800'
             }
             onClick={() => setRange('7d')}
           >
@@ -421,7 +421,7 @@ export default function DashboardPage() {
             className={
               range === '30d'
                 ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
-                : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
+                : 'rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800'
             }
             onClick={() => setRange('30d')}
           >
@@ -433,7 +433,7 @@ export default function DashboardPage() {
             className={
               range === '90d'
                 ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
-                : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
+                : 'rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800'
             }
             onClick={() => setRange('90d')}
           >
@@ -445,7 +445,7 @@ export default function DashboardPage() {
             className={
               range === 'ytd'
                 ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
-                : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
+                : 'rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800'
             }
             onClick={() => setRange('ytd')}
           >
@@ -618,7 +618,7 @@ export default function DashboardPage() {
                 className={
                   chartView === 'category'
                     ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
-                    : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
+                    : 'rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800'
                 }
                 onClick={() => setChartView('category')}
               >
@@ -630,7 +630,7 @@ export default function DashboardPage() {
                 className={
                   chartView === 'trend'
                     ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
-                    : 'rounded-md border-slate-200 text-slate-700 hover:bg-slate-50'
+                    : 'rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800'
                 }
                 onClick={() => setChartView('trend')}
               >
@@ -728,7 +728,7 @@ export default function DashboardPage() {
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
-                    className="rounded-md border-slate-200 text-slate-700 hover:bg-slate-50"
+                    className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
                     onClick={() => setInsights('')}
                   >
                     Clear
@@ -772,7 +772,7 @@ export default function DashboardPage() {
             </div>
             <Button
               variant="outline"
-              className="rounded-md border-slate-200 text-slate-700 hover:bg-slate-50"
+              className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
               onClick={() => router.push('/bills')}
             >
               View All
@@ -835,7 +835,7 @@ export default function DashboardPage() {
             </div>
             <Button
               variant="outline"
-              className="rounded-md border-slate-200 text-slate-700 hover:bg-slate-50"
+              className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
               onClick={() => router.push('/budgets')}
             >
               View Budgets
