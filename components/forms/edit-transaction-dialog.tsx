@@ -130,7 +130,7 @@ export function EditTransactionDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50">
+        <Button type="button" variant="outline" size="sm" className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800">
           <Pencil className="mr-2 h-4 w-4" />
           Edit
         </Button>
