@@ -114,8 +114,8 @@ export function BillForm() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button className="rounded-md bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer">
-            <Plus className="mr-2 h-4 w-4" />
+        <Button variant="outline" className="h-20 flex-col gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+            <Plus className="h-5 w-5" />
             Add Bill
         </Button>
       </DialogTrigger>
