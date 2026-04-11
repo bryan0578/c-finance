@@ -657,7 +657,7 @@ export default function DashboardPage() {
             </div>
             <Button
               variant="outline"
-              className="rounded-md border-slate-200 text-slate-700 hover:bg-slate-50"
+              className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
               onClick={() => router.push('/transactions')}
             >
               View All
@@ -914,7 +914,7 @@ export default function DashboardPage() {
                     trigger={
                     <Button
                         variant="outline"
-                        className="h-24 w-full flex-col gap-2 rounded-lg border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50"
+                        className="h-24 w-full flex-col gap-2 rounded-lg border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
                     >
                         <Plus className="h-5 w-5" />
                         Add Transaction
@@ -926,7 +926,7 @@ export default function DashboardPage() {
                     trigger={
                     <Button
                         variant="outline"
-                        className="h-24 w-full flex-col gap-2 rounded-lg border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50"
+                        className="h-24 w-full flex-col gap-2 rounded-lg border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800" 
                     >
                         <Plus className="h-5 w-5" />
                         Add Bill
@@ -938,7 +938,7 @@ export default function DashboardPage() {
                     trigger={
                     <Button
                         variant="outline"
-                        className="h-24 w-full flex-col gap-2 rounded-lg border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50"
+                        className="h-24 w-full flex-col gap-2 rounded-lg border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
                     >
                         <Plus className="h-5 w-5" />
                         Create Budget

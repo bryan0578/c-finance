@@ -21,10 +21,14 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import {
-  CalendarClock,
-  Search,
-  Trash2,
-} from 'lucide-react';
+    CalendarClock,
+    Search,
+    AlertTriangle,
+    Wallet,
+    Trash2,
+    Receipt,
+    CircleDollarSign,
+  } from 'lucide-react';
 
 import { useAuth } from '@/components/auth-provider';
 import { db } from '@/lib/firebase';
@@ -157,7 +161,17 @@ function getFrequencyBadgeClass(frequency: BillFrequency) {
       return 'bg-indigo-50 text-indigo-700 ring-indigo-200';
   }
 }
-
+function getBillCardClass(status: BillStatus) {
+    switch (status) {
+      case 'overdue':
+        return 'border-rose-200 bg-rose-50/40';
+      case 'due-soon':
+        return 'border-amber-200 bg-amber-50/40';
+      case 'upcoming':
+      default:
+        return 'border-slate-200 bg-white';
+    }
+}
 function advanceDueDate(current: Date, frequency: BillFrequency) {
   if (frequency === 'weekly') return addWeeks(current, 1);
   if (frequency === 'yearly') return addYears(current, 1);
@@ -331,7 +345,7 @@ async function handleDeleteBill(billId: string) {
     return (
       <Card
         key={bill.id}
-        className="rounded-lg border border-slate-200 bg-white shadow-sm transition-colors"
+        className={`rounded-lg border shadow-sm transition-colors ${getBillCardClass(status)}`}
       >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
@@ -368,23 +382,22 @@ async function handleDeleteBill(billId: string) {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="text-3xl font-semibold text-slate-900">
-            {formatCurrency(bill.expectedAmount)}
-          </div>
+            <div className="text-3xl font-semibold text-slate-900">
+                {formatCurrency(bill.expectedAmount)}
+            </div>
 
-          <div className="flex items-center justify-between gap-3">
-            <span
-              className={`text-sm ${
-                status === 'overdue'
-                  ? 'font-medium text-rose-700'
-                  : status === 'due-soon'
-                    ? 'font-medium text-amber-700'
-                    : 'text-slate-500'
-              }`}
-            >
-              {subtitle}
-            </span>
-
+            <div className="flex items-center justify-between gap-3">
+                <span
+                    className={`text-sm ${
+                        status === 'overdue'
+                        ? 'font-medium text-rose-700'
+                        : status === 'due-soon'
+                            ? 'font-medium text-amber-700'
+                            : 'text-slate-500'
+                    }`}
+                    >
+                    {subtitle}
+                </span>
             <div className="flex items-center gap-2">
               <EditBillDialog userId={userId} bill={bill} />
 
@@ -459,62 +472,74 @@ async function handleDeleteBill(billId: string) {
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">
-              Total recurring bills
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-slate-900">
-              {summary.totalCount}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="grid gap-4 md:grid-cols-4">
+            <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">
+                    Total recurring bills
+                </CardTitle>
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+                    <Receipt className="h-4 w-4" />
+                </div>
+                </CardHeader>
+                <CardContent>
+                <div className="text-2xl font-semibold text-slate-900">
+                    {summary.totalCount}
+                </div>
+                </CardContent>
+            </Card>
 
-        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">
-              Monthly equivalent
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-slate-900">
-              {formatCurrency(summary.totalMonthlyEquivalent)}
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">
+                    Monthly equivalent
+                </CardTitle>
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-indigo-50 text-indigo-700">
+                    <CalendarClock className="h-4 w-4" />
+                </div>
+                </CardHeader>
+                <CardContent>
+                <div className="text-2xl font-semibold text-slate-900">
+                    {formatCurrency(summary.totalMonthlyEquivalent)}
+                </div>
+                </CardContent>
+            </Card>
 
-        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">
-              Overdue / due soon
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-slate-900">
-              {summary.overdueCount + summary.dueSoonCount}
-            </div>
-            <p className="mt-1 text-sm text-slate-500">
-              {summary.overdueCount} overdue, {summary.dueSoonCount} due soon
-            </p>
-          </CardContent>
-        </Card>
+            <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">
+                    Overdue / due soon
+                </CardTitle>
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-amber-50 text-amber-700">
+                    <AlertTriangle className="h-4 w-4" />
+                </div>
+                </CardHeader>
+                <CardContent>
+                <div className="text-2xl font-semibold text-slate-900">
+                    {summary.overdueCount + summary.dueSoonCount}
+                </div>
+                <p className="mt-1 text-sm text-slate-500">
+                    {summary.overdueCount} overdue, {summary.dueSoonCount} due soon
+                </p>
+                </CardContent>
+            </Card>
 
-        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">
-              Remaining amount
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-slate-900">
-              {formatCurrency(summary.remainingAmount)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">
+                    Remaining amount
+                </CardTitle>
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-sky-50 text-sky-700">
+                    <Wallet className="h-4 w-4" />
+                </div>
+                </CardHeader>
+                <CardContent>
+                <div className="text-2xl font-semibold text-slate-900">
+                    {formatCurrency(summary.remainingAmount)}
+                </div>
+                </CardContent>
+            </Card>
+        </div>
 
       <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
         <CardHeader className="space-y-4">
