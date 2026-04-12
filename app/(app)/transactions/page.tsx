@@ -1707,72 +1707,113 @@ export default function TransactionsPage() {
             </DialogContent>
         </Dialog>
 
-      <Dialog open={confirmBulkDeleteOpen} onOpenChange={setConfirmBulkDeleteOpen}>
-        <DialogContent className="rounded-xl sm:max-w-[440px]">
-          <DialogHeader>
-            <DialogTitle className="text-slate-900">
-              Delete selected transactions?
-            </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              This will permanently remove {selectedIds.length} selected transaction
-              {selectedIds.length > 1 ? 's' : ''}.
-            </DialogDescription>
-          </DialogHeader>
+        <Dialog
+            open={confirmBulkDeleteOpen}
+            onOpenChange={(open) => {
+                if (!isBulkDeleting) {
+                setConfirmBulkDeleteOpen(open);
+                }
+            }}
+            >
+            <DialogContent className="rounded-xl p-0 sm:max-w-[520px]">
+                <div className="px-6 pt-6 pb-4">
+                <DialogTitle className="text-xl font-semibold tracking-tight text-slate-900">
+                    Delete selected transactions?
+                </DialogTitle>
+                <DialogDescription className="mt-2 text-sm text-muted-foreground">
+                    This will permanently remove {selectedIds.length} selected transaction
+                    {selectedIds.length !== 1 ? 's' : ''}. This action cannot be undone.
+                </DialogDescription>
+                </div>
 
-          <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-md border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-              onClick={() => setConfirmBulkDeleteOpen(false)}
-              disabled={isBulkDeleting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="rounded-md bg-rose-600 text-white hover:bg-rose-700"
-              onClick={handleBulkDelete}
-              disabled={isBulkDeleting}
-            >
-              {isBulkDeleting ? 'Deleting...' : 'Delete selected'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                <div className="px-6 pb-6">
+                <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                    <div className="space-y-1">
+                    <p className="text-base font-medium text-slate-900">
+                        {selectedIds.length} transaction{selectedIds.length !== 1 ? 's' : ''} selected
+                    </p>
+                    <p className="text-sm text-slate-500">
+                        This will remove the selected transactions from your records and update the table immediately.
+                    </p>
+                    </div>
+                </div>
 
-      <Dialog open={confirmBulkUnlinkOpen} onOpenChange={setConfirmBulkUnlinkOpen}>
-        <DialogContent className="rounded-xl sm:max-w-[440px]">
-          <DialogHeader>
-            <DialogTitle className="text-slate-900">
-              Unlink selected bill matches?
-            </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              This will remove bill links from selected matched transactions.
-            </DialogDescription>
-          </DialogHeader>
+                <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-md border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                    onClick={() => setConfirmBulkDeleteOpen(false)}
+                    disabled={isBulkDeleting}
+                    >
+                    Cancel
+                    </Button>
+                    <Button
+                    type="button"
+                    className="rounded-md bg-rose-600 text-white hover:bg-rose-700"
+                    onClick={handleBulkDelete}
+                    disabled={isBulkDeleting}
+                    >
+                    {isBulkDeleting ? 'Deleting...' : 'Delete selected'}
+                    </Button>
+                </div>
+                </div>
+            </DialogContent>
+        </Dialog>
 
-          <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-md border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-              onClick={() => setConfirmBulkUnlinkOpen(false)}
-              disabled={isBulkUnlinking}
+        <Dialog
+            open={confirmBulkUnlinkOpen}
+            onOpenChange={(open) => {
+                if (!isBulkUnlinking) {
+                setConfirmBulkUnlinkOpen(open);
+                }
+            }}
             >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
-              onClick={handleBulkUnlink}
-              disabled={isBulkUnlinking}
-            >
-              {isBulkUnlinking ? 'Unlinking...' : 'Unlink selected'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogContent className="rounded-xl p-0 sm:max-w-[520px]">
+                <div className="px-6 pt-6 pb-4">
+                <DialogTitle className="text-xl font-semibold tracking-tight text-slate-900">
+                    Unlink selected bill matches?
+                </DialogTitle>
+                <DialogDescription className="mt-2 text-sm text-muted-foreground">
+                    This will remove bill links from the selected matched transactions.
+                </DialogDescription>
+                </div>
+
+                <div className="px-6 pb-6">
+                <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                    <div className="space-y-1">
+                    <p className="text-base font-medium text-slate-900">
+                        {selectedTransactions.filter((tx) => tx.linkedRecurringId).length} matched transaction
+                        {selectedTransactions.filter((tx) => tx.linkedRecurringId).length !== 1 ? 's' : ''}
+                    </p>
+                    <p className="text-sm text-slate-500">
+                        The transactions will remain in your history, but they will no longer be connected to their bills.
+                    </p>
+                    </div>
+                </div>
+
+                <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
+                    onClick={() => setConfirmBulkUnlinkOpen(false)}
+                    disabled={isBulkUnlinking}
+                    >
+                    Cancel
+                    </Button>
+                    <Button
+                    type="button"
+                    className="rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+                    onClick={handleBulkUnlink}
+                    disabled={isBulkUnlinking}
+                    >
+                    {isBulkUnlinking ? 'Unlinking...' : 'Unlink selected'}
+                    </Button>
+                </div>
+                </div>
+            </DialogContent>
+        </Dialog>
     </>
   );
 }
