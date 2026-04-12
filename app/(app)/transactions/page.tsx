@@ -1453,213 +1453,233 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      <Dialog
-        open={Boolean(deleteTarget)}
-        onOpenChange={(open) => {
-          if (!open && !isDeleting) {
-            setDeleteTarget(null);
-          }
-        }}
-      >
-        <DialogContent className="rounded-xl sm:max-w-[440px]">
-          <DialogHeader>
-            <DialogTitle className="text-slate-900">
-              Delete transaction?
-            </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              This will permanently remove this transaction from your records.
-              This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-
-          {deleteTarget && (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-slate-900">
-                  {deleteTarget.note || deleteTarget.category}
-                </p>
-                <p className="text-sm text-slate-500">
-                  {deleteTarget.category} •{' '}
-                  {parseTransactionDate(deleteTarget.date)
-                    ? format(
-                        parseTransactionDate(deleteTarget.date) as Date,
-                        'MMM d, yyyy'
-                      )
-                    : '—'}
-                </p>
-                <p className="text-sm font-medium text-slate-900">
-                  {deleteTarget.type === 'income' ? '+' : '-'}
-                  {formatCurrency(deleteTarget.amount)}
-                </p>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-md border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-              onClick={() => setDeleteTarget(null)}
-              disabled={isDeleting}
+        <Dialog   
+            open={Boolean(deleteTarget)}
+            onOpenChange={(open) => {
+                if (!open && !isDeleting) {
+                setDeleteTarget(null);
+                }
+            }}
             >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="rounded-md bg-rose-600 text-white hover:bg-rose-700"
-              onClick={handleDeleteTransaction}
-              disabled={isDeleting}
+            <DialogContent className="rounded-xl p-0 sm:max-w-[520px]">
+                <div className="px-6 pt-6 pb-4">
+                <DialogTitle className="text-xl font-semibold tracking-tight text-slate-900">
+                    Delete transaction?
+                </DialogTitle>
+                <DialogDescription className="mt-2 text-sm text-muted-foreground">
+                    This will permanently remove this transaction from your records. This action
+                    cannot be undone.
+                </DialogDescription>
+                </div>
+
+                {deleteTarget && (
+                <div className="px-6 pb-6">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                    <div className="space-y-1">
+                        <p className="text-base font-medium text-slate-900">
+                        {deleteTarget.note || deleteTarget.category}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                        {deleteTarget.category} •{' '}
+                        {parseTransactionDate(deleteTarget.date)
+                            ? format(parseTransactionDate(deleteTarget.date) as Date, 'MMM d, yyyy')
+                            : '—'}
+                        </p>
+                        <p className="pt-1 text-base font-medium text-slate-900">
+                        {deleteTarget.type === 'income' ? '+' : '-'}
+                        {formatCurrency(deleteTarget.amount)}
+                        </p>
+                    </div>
+                    </div>
+
+                    <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-md border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                        onClick={() => setDeleteTarget(null)}
+                        disabled={isDeleting}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="button"
+                        className="rounded-md bg-rose-600 text-white hover:bg-rose-700"
+                        onClick={handleDeleteTransaction}
+                        disabled={isDeleting}
+                    >
+                        {isDeleting ? 'Deleting...' : 'Delete transaction'}
+                    </Button>
+                    </div>
+                </div>
+                )}
+            </DialogContent>
+        </Dialog>
+
+        <Dialog
+            open={Boolean(unlinkTarget)}
+            onOpenChange={(open) => {
+                if (!open && !isUnlinking) {
+                setUnlinkTarget(null);
+                }
+            }}
             >
-              {isDeleting ? 'Deleting...' : 'Delete transaction'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogContent className="rounded-xl p-0 sm:max-w-[520px]">
+                <div className="px-6 pt-6 pb-4">
+                <DialogTitle className="text-xl font-semibold tracking-tight text-slate-900">
+                    Unlink bill match?
+                </DialogTitle>
+                <DialogDescription className="mt-2 text-sm text-muted-foreground">
+                    This will remove the connection between this transaction and the matched bill.
+                </DialogDescription>
+                </div>
 
-      <Dialog
-        open={Boolean(unlinkTarget)}
-        onOpenChange={(open) => {
-          if (!open && !isUnlinking) {
-            setUnlinkTarget(null);
-          }
-        }}
-      >
-        <DialogContent className="rounded-xl sm:max-w-[440px]">
-          <DialogHeader>
-            <DialogTitle className="text-slate-900">
-              Unlink bill match?
-            </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              This will remove the connection between this transaction and the matched bill.
-            </DialogDescription>
-          </DialogHeader>
+                {unlinkTarget && (
+                <div className="px-6 pb-6">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                    <div className="space-y-1">
+                        <p className="text-base font-medium text-slate-900">
+                        {unlinkTarget.note || unlinkTarget.category}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                        Linked bill:{' '}
+                        {unlinkTarget.linkedRecurringId
+                            ? billNameById[unlinkTarget.linkedRecurringId] ?? 'Unknown bill'
+                            : '—'}
+                        </p>
+                    </div>
+                    </div>
 
-          {unlinkTarget && (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-slate-900">
-                  {unlinkTarget.note || unlinkTarget.category}
-                </p>
-                <p className="text-sm text-slate-500">
-                  Linked bill: {unlinkTarget.linkedRecurringId
-                    ? billNameById[unlinkTarget.linkedRecurringId] ?? 'Unknown bill'
-                    : '—'}
-                </p>
-              </div>
-            </div>
-          )}
+                    <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
+                        onClick={() => setUnlinkTarget(null)}
+                        disabled={isUnlinking}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="button"
+                        className="rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+                        onClick={handleUnlinkBillMatch}
+                        disabled={isUnlinking}
+                    >
+                        {isUnlinking ? 'Unlinking...' : 'Unlink bill match'}
+                    </Button>
+                    </div>
+                </div>
+                )}
+            </DialogContent>
+        </Dialog>
 
-          <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-md border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-              onClick={() => setUnlinkTarget(null)}
-              disabled={isUnlinking}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
-              onClick={handleUnlinkBillMatch}
-              disabled={isUnlinking}
-            >
-              {isUnlinking ? 'Unlinking...' : 'Unlink bill match'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
+        <Dialog
         open={Boolean(detailsTarget)}
         onOpenChange={(open) => {
-          if (!open) setDetailsTarget(null);
+            if (!open) setDetailsTarget(null);
         }}
-      >
-        <DialogContent className="rounded-xl sm:max-w-[520px]">
-          <DialogHeader>
-            <DialogTitle className="text-slate-900">
-              Transaction details
-            </DialogTitle>
-            <DialogDescription className="text-slate-500">
-              Review the full transaction record and any bill matching signals.
-            </DialogDescription>
-          </DialogHeader>
-
-          {detailsTarget && (
-            <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Date</p>
-                  <p className="mt-1 text-sm font-medium text-slate-900">
-                    {parseTransactionDate(detailsTarget.date)
-                      ? format(parseTransactionDate(detailsTarget.date) as Date, 'MMM d, yyyy')
-                      : '—'}
-                  </p>
+        >
+            <DialogContent className="rounded-xl p-0 sm:max-w-[640px]">
+                <div className="px-6 pt-6 pb-4">
+                <DialogTitle className="text-xl font-semibold tracking-tight text-slate-900">
+                    Transaction details
+                </DialogTitle>
+                <DialogDescription className="mt-2 text-sm text-muted-foreground">
+                    Review the full transaction record and any bill matching signals.
+                </DialogDescription>
                 </div>
 
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Amount</p>
-                  <p className="mt-1 text-sm font-medium text-slate-900">
-                    {detailsTarget.type === 'income' ? '+' : '-'}
-                    {formatCurrency(detailsTarget.amount)}
-                  </p>
+                {detailsTarget && (
+                <div className="px-6 pb-6">
+                    <div className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                            Date
+                        </p>
+                        <p className="mt-2 text-base font-medium text-slate-900">
+                            {parseTransactionDate(detailsTarget.date)
+                            ? format(parseTransactionDate(detailsTarget.date) as Date, 'MMM d, yyyy')
+                            : '—'}
+                        </p>
+                        </div>
+
+                        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                            Amount
+                        </p>
+                        <p className="mt-2 text-base font-medium text-slate-900">
+                            {detailsTarget.type === 'income' ? '+' : '-'}
+                            {formatCurrency(detailsTarget.amount)}
+                        </p>
+                        </div>
+
+                        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                            Category
+                        </p>
+                        <p className="mt-2 text-base font-medium text-slate-900">
+                            {detailsTarget.category}
+                        </p>
+                        </div>
+
+                        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                            Type
+                        </p>
+                        <p className="mt-2 text-base font-medium capitalize text-slate-900">
+                            {detailsTarget.type}
+                        </p>
+                        </div>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                        Note
+                        </p>
+                        <p className="mt-2 text-base text-slate-900">
+                        {detailsTarget.note || '—'}
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                        Bill link
+                        </p>
+                        <p className="mt-2 text-base text-slate-900">
+                        {detailsTarget.linkedBillName
+                            ? `Matched to ${detailsTarget.linkedBillName}`
+                            : 'Not linked to a bill'}
+                        </p>
+                    </div>
+
+                    {(detailsTarget.needsReview ||
+                        detailsTarget.isDuplicate ||
+                        detailsTarget.recurringCandidate) && (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                        {detailsTarget.needsReview && (
+                            <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium ring-1 bg-amber-50 text-amber-700 ring-amber-200">
+                            Needs review
+                            </span>
+                        )}
+                        {detailsTarget.isDuplicate && (
+                            <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium ring-1 bg-rose-50 text-rose-700 ring-rose-200">
+                            Possible duplicate
+                            </span>
+                        )}
+                        {detailsTarget.recurringCandidate && (
+                            <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium ring-1 bg-sky-50 text-sky-700 ring-sky-200">
+                            Looks recurring
+                            </span>
+                        )}
+                        </div>
+                    )}
+                    </div>
                 </div>
-
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Category</p>
-                  <p className="mt-1 text-sm font-medium text-slate-900">
-                    {detailsTarget.category}
-                  </p>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Type</p>
-                  <p className="mt-1 text-sm font-medium text-slate-900">
-                    {detailsTarget.type}
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Note</p>
-                <p className="mt-1 text-sm text-slate-900">
-                  {detailsTarget.note || '—'}
-                </p>
-              </div>
-
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Bill link</p>
-                <p className="mt-1 text-sm text-slate-900">
-                  {detailsTarget.linkedBillName
-                    ? `Matched to ${detailsTarget.linkedBillName}`
-                    : 'Not linked to a bill'}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {detailsTarget.needsReview && (
-                  <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium ring-1 bg-amber-50 text-amber-700 ring-amber-200">
-                    Needs review
-                  </span>
                 )}
-                {detailsTarget.isDuplicate && (
-                  <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium ring-1 bg-rose-50 text-rose-700 ring-rose-200">
-                    Possible duplicate
-                  </span>
-                )}
-                {detailsTarget.recurringCandidate && (
-                  <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium ring-1 bg-sky-50 text-sky-700 ring-sky-200">
-                    Looks recurring
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            </DialogContent>
+        </Dialog>
 
       <Dialog open={confirmBulkDeleteOpen} onOpenChange={setConfirmBulkDeleteOpen}>
         <DialogContent className="rounded-xl sm:max-w-[440px]">
