@@ -490,7 +490,7 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-indigo-900">
+            <div className="text-2xl font-bold text-foreground">
               {balance >= 0 ? '+' : ''}
               {formatCurrency(balance)}
             </div>
