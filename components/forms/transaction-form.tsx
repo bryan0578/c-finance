@@ -5,7 +5,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Plus, CalendarDays } from 'lucide-react';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import {
+  addDoc,
+  collection,
+  getDocs,
+  serverTimestamp,
+} from 'firebase/firestore';
 
 import { useAuth } from '@/components/auth-provider';
 import { db } from '@/lib/firebase';
@@ -37,48 +42,149 @@ import {
 } from '@/components/ui/select';
 
 const formSchema = z.object({
-    type: z.enum(['income', 'expense']),
-    amount: z
-      .string()
-      .min(1, 'Amount is required')
-      .refine((value) => !Number.isNaN(Number(value)), 'Amount must be a valid number')
-      .transform((value) => Number(value))
-      .refine((value) => value > 0, 'Amount must be greater than 0'),
-    category: z
-      .string()
-      .trim()
-      .min(1, 'Category is required')
-      .max(50, 'Category must be 50 characters or less'),
-    date: z.string().min(1, 'Date is required'),
-    note: z
-      .string()
-      .trim()
-      .max(200, 'Note must be 200 characters or less'),
-  });
-  
-  type TransactionFormValues = z.infer<typeof formSchema>;
-  
-  type TransactionFormInput = {
-    type: 'income' | 'expense';
-    amount: string;
-    category: string;
-    date: string;
-    note: string;
-  };
-  
-  const defaultValues: TransactionFormInput = {
-    type: 'expense',
-    amount: '',
-    category: '',
-    date: new Date().toISOString().split('T')[0],
-    note: '',
-  };
-  type TransactionFormProps = {
-    trigger?: React.ReactNode;
-  };
-  
-export function TransactionForm({ trigger }: TransactionFormProps) {
+  type: z.enum(['income', 'expense']),
+  amount: z
+    .string()
+    .min(1, 'Amount is required')
+    .refine((value) => !Number.isNaN(Number(value)), 'Amount must be a valid number')
+    .transform((value) => Number(value))
+    .refine((value) => value > 0, 'Amount must be greater than 0'),
+  category: z
+    .string()
+    .trim()
+    .min(1, 'Category is required')
+    .max(50, 'Category must be 50 characters or less'),
+  date: z.string().min(1, 'Date is required'),
+  note: z
+    .string()
+    .trim()
+    .max(200, 'Note must be 200 characters or less'),
+});
 
+type TransactionFormValues = z.infer<typeof formSchema>;
+
+type TransactionFormInput = {
+  type: 'income' | 'expense';
+  amount: string;
+  category: string;
+  date: string;
+  note: string;
+};
+
+type TransactionFormProps = {
+  trigger?: React.ReactNode;
+};
+
+type RecurringBill = {
+  id: string;
+  name: string;
+  expectedAmount: number;
+  nextDueDate: string;
+};
+
+const defaultValues: TransactionFormInput = {
+  type: 'expense',
+  amount: '',
+  category: '',
+  date: new Date().toISOString().split('T')[0],
+  note: '',
+};
+
+function normalizeText(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function parseDateSafe(value: string) {
+  if (!value) return null;
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getBillMatchScore(
+  bill: RecurringBill,
+  tx: {
+    amount: number;
+    category: string;
+    note?: string;
+    date: string;
+    type: 'income' | 'expense';
+  }
+) {
+  if (tx.type !== 'expense') return 0;
+
+  let score = 0;
+
+  const billName = normalizeText(bill.name);
+  const txCategory = normalizeText(tx.category);
+  const txNote = normalizeText(tx.note || '');
+
+  const amountDiff = Math.abs(Number(tx.amount) - Number(bill.expectedAmount));
+
+  if (amountDiff < 0.01) {
+    score += 5;
+  } else if (amountDiff <= 5) {
+    score += 3;
+  } else if (amountDiff <= 20) {
+    score += 1;
+  }
+
+  if (txCategory === billName) {
+    score += 5;
+  } else if (txCategory.includes(billName) || billName.includes(txCategory)) {
+    score += 3;
+  }
+
+  if (txNote.includes(billName)) {
+    score += 3;
+  }
+
+  const txDate = parseDateSafe(tx.date);
+  const dueDate = parseDateSafe(bill.nextDueDate);
+
+  if (txDate && dueDate) {
+    const diffDays = Math.abs(
+      Math.round((txDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+    );
+
+    if (diffDays <= 3) {
+      score += 4;
+    } else if (diffDays <= 7) {
+      score += 2;
+    } else if (diffDays > 14) {
+      score = 0;
+    }
+  }
+
+  return score;
+}
+
+function findMatchingBill(
+  bills: RecurringBill[],
+  tx: {
+    amount: number;
+    category: string;
+    note?: string;
+    date: string;
+    type: 'income' | 'expense';
+  }
+) {
+  let bestMatch: RecurringBill | null = null;
+  let bestScore = 0;
+
+  for (const bill of bills) {
+    const score = getBillMatchScore(bill, tx);
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = bill;
+    }
+  }
+
+  return bestScore >= 7 ? bestMatch : null;
+}
+
+export function TransactionForm({ trigger }: TransactionFormProps) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
 
@@ -92,23 +198,47 @@ export function TransactionForm({ trigger }: TransactionFormProps) {
   async function onSubmit(values: TransactionFormValues) {
     if (!user) return;
 
-    const path = `users/${user.uid}/transactions`;
+    const txPath = `users/${user.uid}/transactions`;
+    const billsPath = `users/${user.uid}/recurring`;
 
     try {
-      await addDoc(collection(db, path), {
+      let linkedRecurringId: string | undefined;
+
+      if (values.type === 'expense') {
+        const billsSnapshot = await getDocs(collection(db, billsPath));
+        const bills = billsSnapshot.docs.map((docItem) => ({
+          id: docItem.id,
+          name: String(docItem.data().name ?? ''),
+          expectedAmount: Number(docItem.data().expectedAmount ?? 0),
+          nextDueDate: String(docItem.data().nextDueDate ?? ''),
+        }));
+
+        const matchedBill = findMatchingBill(bills, {
+          type: values.type,
+          amount: values.amount,
+          category: values.category,
+          note: values.note,
+          date: values.date,
+        });
+
+        linkedRecurringId = matchedBill?.id;
+      }
+
+      await addDoc(collection(db, txPath), {
         uid: user.uid,
         type: values.type,
         amount: values.amount,
         category: values.category,
         date: values.date,
         note: values.note || '',
+        ...(linkedRecurringId ? { linkedRecurringId } : {}),
         createdAt: serverTimestamp(),
       });
 
       form.reset(defaultValues);
       setOpen(false);
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, path);
+      handleFirestoreError(error, OperationType.CREATE, txPath);
     }
   }
 
@@ -122,16 +252,16 @@ export function TransactionForm({ trigger }: TransactionFormProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogTrigger asChild>
-            {trigger ?? (
-                <Button className="gap-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
-                <Plus className="h-4 w-4" />
-                Add Transaction
-                </Button>
-            )}
-        </DialogTrigger>
+      <DialogTrigger asChild>
+        {trigger ?? (
+          <Button className="gap-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+            <Plus className="h-4 w-4" />
+            Add Transaction
+          </Button>
+        )}
+      </DialogTrigger>
 
-      <DialogContent className="p-0 sm:max-w-[560px] rounded-xl">
+      <DialogContent className="rounded-xl p-0 sm:max-w-[560px]">
         <div className="px-6 pt-6 pb-4">
           <DialogTitle className="text-xl font-semibold tracking-tight">
             Add transaction
