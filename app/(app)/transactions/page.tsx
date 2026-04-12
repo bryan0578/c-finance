@@ -18,12 +18,17 @@ import {
   query,
 } from 'firebase/firestore';
 import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  Download,
-  Search,
-  Trash2,
+    ArrowDown,
+    ArrowUp,
+    ArrowUpDown,
+    Download,
+    Link2Off,
+    Receipt,
+    Search,
+    Trash2,
+    TrendingDown,
+    TrendingUp,
+    Wallet,
 } from 'lucide-react';
 
 import { useAuth } from '@/components/auth-provider';
@@ -443,62 +448,74 @@ export default function TransactionsPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-4">
-          <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">
-                Visible transactions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold text-slate-900">
-                {summary.count}
-              </div>
-            </CardContent>
-          </Card>
+            <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">
+                    Visible transactions
+                </CardTitle>
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+                    <Receipt className="h-4 w-4" />
+                </div>
+                </CardHeader>
+                <CardContent>
+                <div className="text-2xl font-semibold text-slate-900">
+                    {summary.count}
+                </div>
+                </CardContent>
+            </Card>
 
-          <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">
-                Income
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold text-slate-900">
-                {formatCurrency(summary.income)}
-              </div>
-            </CardContent>
-          </Card>
+            <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">
+                    Income
+                </CardTitle>
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
+                    <TrendingUp className="h-4 w-4" />
+                </div>
+                </CardHeader>
+                <CardContent>
+                <div className="text-2xl font-semibold text-slate-900">
+                    {formatCurrency(summary.income)}
+                </div>
+                </CardContent>
+            </Card>
 
-          <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">
-                Expenses
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold text-slate-900">
-                {formatCurrency(summary.expenses)}
-              </div>
-            </CardContent>
-          </Card>
+            <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">
+                    Expenses
+                </CardTitle>
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-rose-50 text-rose-700">
+                    <TrendingDown className="h-4 w-4" />
+                </div>
+                </CardHeader>
+                <CardContent>
+                <div className="text-2xl font-semibold text-slate-900">
+                    {formatCurrency(summary.expenses)}
+                </div>
+                </CardContent>
+            </Card>
 
-          <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">
-                Net
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div
-                className={`text-2xl font-semibold ${
-                  summary.net >= 0 ? 'text-slate-900' : 'text-rose-700'
-                }`}
-              >
-                {summary.net >= 0 ? '+' : ''}
-                {formatCurrency(summary.net)}
-              </div>
-            </CardContent>
-          </Card>
+            <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">
+                    Net
+                </CardTitle>
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-indigo-50 text-indigo-700">
+                    <Wallet className="h-4 w-4" />
+                </div>
+                </CardHeader>
+                <CardContent>
+                <div
+                    className={`text-2xl font-semibold ${
+                    summary.net >= 0 ? 'text-slate-900' : 'text-rose-700'
+                    }`}
+                >
+                    {summary.net >= 0 ? '+' : ''}
+                    {formatCurrency(summary.net)}
+                </div>
+                </CardContent>
+            </Card>
         </div>
 
         <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
