@@ -702,6 +702,32 @@ export default function TransactionsPage() {
     );
   }
 
+  function toggleReviewFilter(value: ReviewFilter) {
+    setCurrentPage(1);
+    setReviewFilter((prev) => (prev === value ? 'all' : value));
+  }
+  
+  function toggleBillMatchFilter(value: BillMatchFilter) {
+    setCurrentPage(1);
+    setBillMatchFilter((prev) => (prev === value ? 'all' : value));
+  }
+  
+  function clearAllFilters() {
+    setSearch('');
+    setTypeFilter('all');
+    setDateFilter('all');
+    setBillMatchFilter('all');
+    setReviewFilter('all');
+    setCurrentPage(1);
+  }
+
+  const hasActiveFilters =
+    search.trim() !== '' ||
+    typeFilter !== 'all' ||
+    dateFilter !== 'all' ||
+    billMatchFilter !== 'all' ||
+    reviewFilter !== 'all';
+
   function renderQuickFilter(
     label: string,
     active: boolean,
@@ -1022,37 +1048,37 @@ export default function TransactionsPage() {
 
               <div className="flex flex-wrap gap-2">
                 {renderQuickFilter('Needs review', reviewFilter === 'needs-review', () => {
-                  setReviewFilter('needs-review');
-                  setCurrentPage(1);
+                    toggleReviewFilter('needs-review');
                 })}
                 {renderQuickFilter('Duplicates', reviewFilter === 'duplicates', () => {
-                  setReviewFilter('duplicates');
-                  setCurrentPage(1);
+                    toggleReviewFilter('duplicates');
                 })}
-                {renderQuickFilter(
-                  'Matched bills',
-                  billMatchFilter === 'matched',
-                  () => {
-                    setBillMatchFilter('matched');
-                    setCurrentPage(1);
-                  }
-                )}
-                {renderQuickFilter(
-                  'Unmatched expenses',
-                  billMatchFilter === 'unmatched',
-                  () => {
-                    setBillMatchFilter('unmatched');
+
+                {renderQuickFilter('Matched bills', billMatchFilter === 'matched', () => {
+                    toggleBillMatchFilter('matched');
+                })}
+
+                {renderQuickFilter('Unmatched expenses', billMatchFilter === 'unmatched', () => {
                     setTypeFilter('expense');
-                    setCurrentPage(1);
-                  }
-                )}
+                    toggleBillMatchFilter('unmatched');
+                })}
+
                 {renderQuickFilter(
-                  'Recurring candidates',
-                  reviewFilter === 'recurring-candidate',
-                  () => {
-                    setReviewFilter('recurring-candidate');
-                    setCurrentPage(1);
-                  }
+                    'Recurring candidates',
+                    reviewFilter === 'recurring-candidate',
+                    () => {
+                        toggleReviewFilter('recurring-candidate');
+                    }
+                )}
+                {hasActiveFilters && (
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-md border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                    onClick={clearAllFilters}
+                >
+                    Clear filters
+                </Button>
                 )}
               </div>
             </CardHeader>
