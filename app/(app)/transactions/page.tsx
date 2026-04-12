@@ -60,6 +60,12 @@ interface Transaction {
   category: string;
   date: string;
   note: string;
+  linkedRecurringId?: string;
+}
+
+interface Bill {
+  id: string;
+  name: string;
 }
 
 type TypeFilter = 'all' | TransactionType;
@@ -91,6 +97,9 @@ function normalizeTransaction(raw: any): Transaction {
     category: String(raw.category ?? 'Uncategorized'),
     date: String(raw.date ?? ''),
     note: String(raw.note ?? ''),
+    linkedRecurringId: raw.linkedRecurringId
+      ? String(raw.linkedRecurringId)
+      : undefined,
   };
 }
 
@@ -160,6 +169,7 @@ export default function TransactionsPage() {
   const { user } = useAuth();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState('');
@@ -175,10 +185,13 @@ export default function TransactionsPage() {
   useEffect(() => {
     if (!user) return;
 
+    let transactionsLoaded = false;
+    let billsLoaded = false;
+
     const path = `users/${user.uid}/transactions`;
     const q = query(collection(db, path), orderBy('date', 'desc'));
 
-    const unsubscribe = onSnapshot(
+    const unsubscribeTransactions = onSnapshot(
       q,
       (snapshot) => {
         const txs = snapshot.docs.map((docItem) =>
@@ -189,7 +202,10 @@ export default function TransactionsPage() {
         );
 
         setTransactions(txs);
-        setLoading(false);
+        transactionsLoaded = true;
+        if (transactionsLoaded && billsLoaded) {
+          setLoading(false);
+        }
       },
       (error) => {
         handleFirestoreError(error, OperationType.LIST, path);
@@ -197,7 +213,32 @@ export default function TransactionsPage() {
       }
     );
 
-    return () => unsubscribe();
+    const billsPath = `users/${user.uid}/recurring`;
+    const billsQuery = query(collection(db, billsPath), orderBy('name', 'asc'));
+
+    const unsubscribeBills = onSnapshot(
+      billsQuery,
+      (snapshot) => {
+        const items = snapshot.docs.map((docItem) => ({
+          id: docItem.id,
+          name: String(docItem.data().name ?? 'Untitled Bill'),
+        }));
+        setBills(items);
+        billsLoaded = true;
+        if (transactionsLoaded && billsLoaded) {
+          setLoading(false);
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, billsPath);
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      unsubscribeTransactions();
+      unsubscribeBills();
+    };
   }, [user]);
 
   async function handleDeleteTransaction(transactionId: string) {
@@ -242,17 +283,25 @@ export default function TransactionsPage() {
     );
   }
 
+  const billNameById = useMemo(() => {
+    return Object.fromEntries(bills.map((bill) => [bill.id, bill.name]));
+  }, [bills]);
+
   const processedTransactions = useMemo(() => {
     const searchValue = search.trim().toLowerCase();
 
     const filtered = transactions.filter((tx) => {
       const txDate = parseTransactionDate(tx.date);
+      const linkedBillName = tx.linkedRecurringId
+        ? (billNameById[tx.linkedRecurringId] ?? '').toLowerCase()
+        : '';
 
       const matchesSearch =
         !searchValue ||
         tx.category.toLowerCase().includes(searchValue) ||
         tx.note.toLowerCase().includes(searchValue) ||
-        tx.type.toLowerCase().includes(searchValue);
+        tx.type.toLowerCase().includes(searchValue) ||
+        linkedBillName.includes(searchValue);
 
       const matchesType = typeFilter === 'all' || tx.type === typeFilter;
 
@@ -298,7 +347,15 @@ export default function TransactionsPage() {
     });
 
     return sorted;
-  }, [transactions, search, typeFilter, dateFilter, sortField, sortDirection]);
+  }, [
+    transactions,
+    search,
+    typeFilter,
+    dateFilter,
+    sortField,
+    sortDirection,
+    billNameById,
+  ]);
 
   const summary = useMemo(() => {
     const income = processedTransactions
@@ -335,7 +392,7 @@ export default function TransactionsPage() {
             Transactions
           </h1>
           <p className="text-slate-500">
-            Search, sort, edit, and export your income and expenses.
+            Search, sort, edit, export, and review linked bill payments.
           </p>
         </div>
 
@@ -434,7 +491,7 @@ export default function TransactionsPage() {
                     setSearch(e.target.value);
                     setCurrentPage(1);
                   }}
-                  placeholder="Search category, note, or type"
+                  placeholder="Search category, note, type, or bill"
                   className="h-10 border-slate-200 pl-9 text-slate-900 placeholder:text-slate-400"
                 />
               </div>
@@ -650,9 +707,25 @@ export default function TransactionsPage() {
                             </span>
                           </TableCell>
 
-                          <TableCell className="max-w-[280px]">
-                            <div className="truncate text-slate-500">
-                              {tx.note || '—'}
+                          <TableCell className="max-w-[320px]">
+                            <div className="space-y-1">
+                              <div className="truncate text-slate-500">
+                                {tx.note || '—'}
+                              </div>
+
+                              {tx.linkedRecurringId && (
+                                <div className="flex flex-wrap gap-2">
+                                  <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium ring-1 bg-indigo-50 text-indigo-700 ring-indigo-200">
+                                    Matched to bill
+                                  </span>
+
+                                  {billNameById[tx.linkedRecurringId] && (
+                                    <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium ring-1 bg-slate-50 text-slate-700 ring-slate-200">
+                                      {billNameById[tx.linkedRecurringId]}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </TableCell>
 
