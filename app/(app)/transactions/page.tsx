@@ -854,7 +854,7 @@ export default function TransactionsPage() {
                 <Button
                     type="button"
                     variant="outline"
-                    className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50"
+                    className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
                     onClick={() => setRecategorizeOpen(true)}
                     >
                     Recategorize
