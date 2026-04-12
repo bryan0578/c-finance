@@ -69,6 +69,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { BulkRecategorizeDialog } from '@/components/transactions/bulk-recategorize-dialog';
 
 type TransactionType = 'income' | 'expense';
 type TypeFilter = 'all' | TransactionType;
@@ -240,7 +241,9 @@ export default function TransactionsPage() {
   const [isUnlinking, setIsUnlinking] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [isBulkUnlinking, setIsBulkUnlinking] = useState(false);
-
+  const [recategorizeOpen, setRecategorizeOpen] = useState(false);
+  const [isRecategorizing, setIsRecategorizing] = useState(false);
+  
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
     type: true,
     category: true,
@@ -651,30 +654,31 @@ export default function TransactionsPage() {
     }
   }
 
-  async function handleBulkRecategorize() {
+  async function handleBulkRecategorize(category: string) {
     if (!user || selectedIds.length === 0) return;
-
-    const nextCategory = window.prompt('Enter a new category for selected transactions');
-
-    if (!nextCategory?.trim()) return;
-
+  
     try {
+      setIsRecategorizing(true);
+  
       const batch = writeBatch(db);
-
+  
       for (const id of selectedIds) {
         batch.update(doc(db, `users/${user.uid}/transactions/${id}`), {
-          category: nextCategory.trim(),
+          category,
         });
       }
-
+  
       await batch.commit();
       setSelectedIds([]);
+      setRecategorizeOpen(false);
     } catch (error) {
       handleFirestoreError(
         error,
         OperationType.UPDATE,
         `users/${user.uid}/transactions`
       );
+    } finally {
+      setIsRecategorizing(false);
     }
   }
 
@@ -848,12 +852,12 @@ export default function TransactionsPage() {
                 </Button>
 
                 <Button
-                  type="button"
-                  variant="outline"
-                  className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
-                  onClick={handleBulkRecategorize}
-                >
-                  Recategorize
+                    type="button"
+                    variant="outline"
+                    className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50"
+                    onClick={() => setRecategorizeOpen(true)}
+                    >
+                    Recategorize
                 </Button>
 
                 <Button
@@ -1814,6 +1818,14 @@ export default function TransactionsPage() {
                 </div>
             </DialogContent>
         </Dialog>
+
+        <BulkRecategorizeDialog
+            open={recategorizeOpen}
+            onOpenChange={setRecategorizeOpen}
+            onConfirm={handleBulkRecategorize}
+            count={selectedIds.length}
+            loading={isRecategorizing}
+        />
     </>
   );
 }
