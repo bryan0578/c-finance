@@ -9,6 +9,7 @@ import {
   format,
   parseISO,
   startOfDay,
+  subDays,
 } from 'date-fns';
 import {
   addDoc,
@@ -18,17 +19,17 @@ import {
   onSnapshot,
   orderBy,
   query,
-  updateDoc,
 } from 'firebase/firestore';
 import {
-    CalendarClock,
-    Search,
-    AlertTriangle,
-    Wallet,
-    Trash2,
-    Receipt,
-    CircleDollarSign,
-  } from 'lucide-react';
+  AlertTriangle,
+  CalendarClock,
+  CheckCircle2,
+  CircleDollarSign,
+  Receipt,
+  Search,
+  Trash2,
+  Wallet,
+} from 'lucide-react';
 
 import { useAuth } from '@/components/auth-provider';
 import { db } from '@/lib/firebase';
@@ -43,8 +44,8 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BillForm } from '@/components/forms/bill-form';
-import { Input } from '@/components/ui/input';
 import { EditBillDialog } from '@/components/forms/edit-bill-dialog';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -55,17 +56,25 @@ import {
 
 type BillType = 'fixed' | 'variable' | 'subscription';
 type BillFrequency = 'weekly' | 'monthly' | 'yearly';
-type BillStatus = 'overdue' | 'due-soon' | 'upcoming' | 'paid';
+type BillStatus = 'overdue' | 'due-soon' | 'upcoming' | 'partial' | 'paid';
 
 interface Bill {
-    id: string;
-    name: string;
-    type: BillType;
-    expectedAmount: number;
-    frequency: BillFrequency;
-    nextDueDate: string;
-    lastPaidDate?: string;
-    lastPaidTransactionId?: string;
+  id: string;
+  name: string;
+  type: BillType;
+  expectedAmount: number;
+  frequency: BillFrequency;
+  nextDueDate: string;
+}
+
+interface Transaction {
+  id: string;
+  type: 'income' | 'expense';
+  amount: number;
+  category: string;
+  date: string;
+  note?: string;
+  linkedRecurringId?: string;
 }
 
 type TypeFilter = 'all' | BillType;
@@ -90,62 +99,44 @@ function parseBillDate(value: string) {
   return Number.isNaN(fallback.getTime()) ? null : fallback;
 }
 
-function normalizeBill(raw: any): Bill {
-    return {
-        id: String(raw.id ?? ''),
-        name: String(raw.name ?? 'Untitled Bill'),
-        type:
-            raw.type === 'variable' || raw.type === 'subscription'
-            ? raw.type
-            : 'fixed',
-        expectedAmount: Number(raw.expectedAmount ?? 0),
-        frequency:
-            raw.frequency === 'weekly' || raw.frequency === 'yearly'
-            ? raw.frequency
-            : 'monthly',
-        nextDueDate: String(raw.nextDueDate ?? ''),
-        lastPaidDate: raw.lastPaidDate ? String(raw.lastPaidDate) : undefined,
-        lastPaidTransactionId: raw.lastPaidTransactionId
-            ? String(raw.lastPaidTransactionId)
-            : undefined,
-    };
+function parseTransactionDate(value: string) {
+  if (!value) return null;
+  const parsed = parseISO(value);
+  if (!Number.isNaN(parsed.getTime())) return parsed;
+
+  const fallback = new Date(value);
+  return Number.isNaN(fallback.getTime()) ? null : fallback;
 }
 
-function isBillPaidForCurrentCycle(bill: Bill) {
-    if (!bill.lastPaidDate) return false;
-  
-    const paidDate = parseBillDate(bill.lastPaidDate);
-    const dueDate = parseBillDate(bill.nextDueDate);
-  
-    if (!paidDate || !dueDate) return false;
-  
-    switch (bill.frequency) {
-      case 'weekly':
-        return differenceInCalendarDays(dueDate, paidDate) <= 7;
-      case 'monthly':
-        return (
-          paidDate.getFullYear() === dueDate.getFullYear() &&
-          paidDate.getMonth() === dueDate.getMonth()
-        );
-      case 'yearly':
-        return paidDate.getFullYear() === dueDate.getFullYear();
-      default:
-        return false;
-    }
+function normalizeBill(raw: any): Bill {
+  return {
+    id: String(raw.id ?? ''),
+    name: String(raw.name ?? 'Untitled Bill'),
+    type:
+      raw.type === 'variable' || raw.type === 'subscription'
+        ? raw.type
+        : 'fixed',
+    expectedAmount: Number(raw.expectedAmount ?? 0),
+    frequency:
+      raw.frequency === 'weekly' || raw.frequency === 'yearly'
+        ? raw.frequency
+        : 'monthly',
+    nextDueDate: String(raw.nextDueDate ?? ''),
+  };
 }
-function getBillStatus(bill: Bill): BillStatus {
-    if (isBillPaidForCurrentCycle(bill)) return 'paid';
-  
-    const dueDate = parseBillDate(bill.nextDueDate);
-    if (!dueDate) return 'upcoming';
-  
-    const today = startOfDay(new Date());
-    const due = startOfDay(dueDate);
-    const dayDiff = differenceInCalendarDays(due, today);
-  
-    if (dayDiff < 0) return 'overdue';
-    if (dayDiff <= DUE_SOON_DAYS) return 'due-soon';
-    return 'upcoming';
+
+function normalizeTransaction(raw: any): Transaction {
+  return {
+    id: String(raw.id ?? ''),
+    type: raw.type === 'income' ? 'income' : 'expense',
+    amount: Number(raw.amount ?? 0),
+    category: String(raw.category ?? 'Uncategorized'),
+    date: String(raw.date ?? ''),
+    note: raw.note ? String(raw.note) : '',
+    linkedRecurringId: raw.linkedRecurringId
+      ? String(raw.linkedRecurringId)
+      : undefined,
+  };
 }
 
 function getStatusLabel(status: BillStatus) {
@@ -156,22 +147,42 @@ function getStatusLabel(status: BillStatus) {
       return 'Due soon';
     case 'upcoming':
       return 'Upcoming';
+    case 'partial':
+      return 'Partial';
     case 'paid':
-        return 'Paid';
+      return 'Paid';
   }
 }
 
 function getStatusBadgeClass(status: BillStatus) {
-    switch (status) {
-      case 'overdue':
-        return 'bg-rose-50 text-rose-700 ring-rose-200';
-      case 'due-soon':
-        return 'bg-amber-50 text-amber-700 ring-amber-200';
-      case 'upcoming':
-        return 'bg-sky-50 text-sky-700 ring-sky-200';
-      case 'paid':
-        return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
-    }
+  switch (status) {
+    case 'overdue':
+      return 'bg-rose-50 text-rose-700 ring-rose-200';
+    case 'due-soon':
+      return 'bg-amber-50 text-amber-700 ring-amber-200';
+    case 'upcoming':
+      return 'bg-sky-50 text-sky-700 ring-sky-200';
+    case 'partial':
+      return 'bg-indigo-50 text-indigo-700 ring-indigo-200';
+    case 'paid':
+      return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
+  }
+}
+
+function getBillCardClass(status: BillStatus) {
+  switch (status) {
+    case 'overdue':
+      return 'border-rose-200 bg-rose-50/40';
+    case 'due-soon':
+      return 'border-amber-200 bg-amber-50/40';
+    case 'partial':
+      return 'border-indigo-200 bg-indigo-50/40';
+    case 'paid':
+      return 'border-emerald-200 bg-emerald-50/40';
+    case 'upcoming':
+    default:
+      return 'border-slate-200 bg-white';
+  }
 }
 
 function getTypeBadgeClass(type: BillType) {
@@ -196,31 +207,96 @@ function getFrequencyBadgeClass(frequency: BillFrequency) {
   }
 }
 
-function getBillCardClass(status: BillStatus) {
-    switch (status) {
-      case 'overdue':
-        return 'border-rose-200 bg-rose-50/40';
-      case 'due-soon':
-        return 'border-amber-200 bg-amber-50/40';
-      case 'paid':
-        return 'border-emerald-200 bg-emerald-50/40';
-      case 'upcoming':
-      default:
-        return 'border-slate-200 bg-white';
-    }
+function getCycleStartDate(bill: Bill, dueDate: Date) {
+  switch (bill.frequency) {
+    case 'weekly':
+      return subDays(dueDate, 7);
+    case 'monthly':
+      return addMonths(dueDate, -1);
+    case 'yearly':
+      return addYears(dueDate, -1);
+    default:
+      return addMonths(dueDate, -1);
+  }
 }
 
-function advanceDueDate(current: Date, frequency: BillFrequency) {
-  if (frequency === 'weekly') return addWeeks(current, 1);
-  if (frequency === 'yearly') return addYears(current, 1);
-  return addMonths(current, 1);
+function getPaidAmountForCurrentCycle(bill: Bill, transactions: Transaction[]) {
+  const dueDate = parseBillDate(bill.nextDueDate);
+  if (!dueDate) return 0;
+
+  const cycleStart = startOfDay(getCycleStartDate(bill, dueDate));
+  const cycleEnd = startOfDay(dueDate);
+
+  return transactions
+    .filter((tx) => {
+      if (tx.type !== 'expense') return false;
+      if (tx.linkedRecurringId !== bill.id) return false;
+
+      const txDate = parseTransactionDate(tx.date);
+      if (!txDate) return false;
+
+      const txDay = startOfDay(txDate);
+      return txDay >= cycleStart && txDay <= cycleEnd;
+    })
+    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+}
+
+function getLastPaymentDateForCurrentCycle(bill: Bill, transactions: Transaction[]) {
+  const dueDate = parseBillDate(bill.nextDueDate);
+  if (!dueDate) return null;
+
+  const cycleStart = startOfDay(getCycleStartDate(bill, dueDate));
+  const cycleEnd = startOfDay(dueDate);
+
+  const matches = transactions
+    .filter((tx) => {
+      if (tx.type !== 'expense') return false;
+      if (tx.linkedRecurringId !== bill.id) return false;
+
+      const txDate = parseTransactionDate(tx.date);
+      if (!txDate) return false;
+
+      const txDay = startOfDay(txDate);
+      return txDay >= cycleStart && txDay <= cycleEnd;
+    })
+    .map((tx) => parseTransactionDate(tx.date))
+    .filter((date): date is Date => Boolean(date))
+    .sort((a, b) => b.getTime() - a.getTime());
+
+  return matches[0] ?? null;
+}
+
+function getBillStatus(
+  bill: Bill,
+  paidAmount: number
+): BillStatus {
+  const dueDate = parseBillDate(bill.nextDueDate);
+  if (!dueDate) return 'upcoming';
+
+  if (paidAmount >= bill.expectedAmount && bill.expectedAmount > 0) {
+    return 'paid';
+  }
+
+  if (paidAmount > 0) {
+    return 'partial';
+  }
+
+  const today = startOfDay(new Date());
+  const due = startOfDay(dueDate);
+  const dayDiff = differenceInCalendarDays(due, today);
+
+  if (dayDiff < 0) return 'overdue';
+  if (dayDiff <= DUE_SOON_DAYS) return 'due-soon';
+  return 'upcoming';
 }
 
 export default function BillsPage() {
   const { user } = useAuth();
 
   const [bills, setBills] = useState<Bill[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loadingBills, setLoadingBills] = useState(true);
+  const [loadingTransactions, setLoadingTransactions] = useState(true);
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
@@ -230,11 +306,11 @@ export default function BillsPage() {
   useEffect(() => {
     if (!user) return;
 
-    const path = `users/${user.uid}/recurring`;
-    const q = query(collection(db, path), orderBy('nextDueDate', 'asc'));
+    const billsPath = `users/${user.uid}/recurring`;
+    const qBills = query(collection(db, billsPath), orderBy('nextDueDate', 'asc'));
 
-    const unsubscribe = onSnapshot(
-      q,
+    const unsubBills = onSnapshot(
+      qBills,
       (snapshot) => {
         const fetchedBills = snapshot.docs.map((docItem) =>
           normalizeBill({
@@ -243,70 +319,149 @@ export default function BillsPage() {
           })
         );
         setBills(fetchedBills);
-        setLoading(false);
+        setLoadingBills(false);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.LIST, path);
-        setLoading(false);
+        handleFirestoreError(error, OperationType.LIST, billsPath);
+        setLoadingBills(false);
       }
     );
 
-    return () => unsubscribe();
+    const txPath = `users/${user.uid}/transactions`;
+    const qTx = query(collection(db, txPath), orderBy('date', 'desc'));
+
+    const unsubTx = onSnapshot(
+      qTx,
+      (snapshot) => {
+        const fetchedTransactions = snapshot.docs.map((docItem) =>
+          normalizeTransaction({
+            id: docItem.id,
+            ...docItem.data(),
+          })
+        );
+        setTransactions(fetchedTransactions);
+        setLoadingTransactions(false);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, txPath);
+        setLoadingTransactions(false);
+      }
+    );
+
+    return () => {
+      unsubBills();
+      unsubTx();
+    };
   }, [user]);
 
   const userId = user?.uid ?? '';
 
-  async function handleMarkPaid(bill: Bill) {
+  async function handleDeleteBill(billId: string) {
+    if (!user) return;
+
+    const confirmed = window.confirm(
+      'Delete this bill? This action cannot be undone.'
+    );
+
+    if (!confirmed) return;
+
+    const path = `users/${userId}/recurring/${billId}`;
+
     try {
-      const txPath = `users/${userId}/transactions`;
-      const createdTx = await addDoc(collection(db, txPath), {
+      await deleteDoc(doc(db, path));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  }
+
+  async function createPaymentTransaction(
+    bill: Bill,
+    amount: number,
+    note: string
+  ) {
+    if (!user) return;
+
+    const txPath = `users/${userId}/transactions`;
+
+    try {
+      await addDoc(collection(db, txPath), {
         uid: userId,
         type: 'expense',
-        amount: bill.expectedAmount,
+        amount,
         category: bill.name,
         date: new Date().toISOString().split('T')[0],
-        note: `Paid ${bill.name}`,
+        note,
         linkedRecurringId: bill.id,
       });
-  
-      const billRef = doc(db, `users/${userId}/recurring`, bill.id);
-      await updateDoc(billRef, {
-        lastPaidDate: new Date().toISOString().split('T')[0],
-        lastPaidTransactionId: createdTx.id,
-      });
     } catch (error) {
-      handleFirestoreError(
-        error,
-        OperationType.WRITE,
-        `users/${userId}/recurring/${bill.id}`
-      );
+      handleFirestoreError(error, OperationType.CREATE, txPath);
     }
-}
-
-async function handleDeleteBill(billId: string) {
-  if (!user) return;
-
-  const confirmed = window.confirm(
-    'Delete this bill? This action cannot be undone.'
-  );
-
-  if (!confirmed) return;
-
-  const path = `users/${userId}/recurring/${billId}`;
-
-  try {
-    await deleteDoc(doc(db, path));
-  } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, path);
   }
-}
+
+  async function handleMarkPaid(
+    bill: Bill,
+    remainingAmount: number
+  ) {
+    if (!user) return;
+    if (remainingAmount <= 0) return;
+
+    await createPaymentTransaction(
+      bill,
+      remainingAmount,
+      `Paid ${bill.name}`
+    );
+  }
+
+  async function handleLogPartialPayment(
+    bill: Bill,
+    remainingAmount: number
+  ) {
+    if (!user) return;
+
+    const response = window.prompt(
+      `Enter a payment amount for ${bill.name} (remaining ${formatCurrency(
+        remainingAmount
+      )})`,
+      remainingAmount > 0 ? remainingAmount.toFixed(2) : bill.expectedAmount.toFixed(2)
+    );
+
+    if (!response) return;
+
+    const amount = Number(response);
+
+    if (Number.isNaN(amount) || amount <= 0) {
+      window.alert('Please enter a valid payment amount greater than 0.');
+      return;
+    }
+
+    await createPaymentTransaction(
+      bill,
+      amount,
+      `Partial payment for ${bill.name}`
+    );
+  }
+
+  const enrichedBills = useMemo(() => {
+    return bills.map((bill) => {
+      const paidAmount = getPaidAmountForCurrentCycle(bill, transactions);
+      const remainingAmount = Math.max(bill.expectedAmount - paidAmount, 0);
+      const status = getBillStatus(bill, paidAmount);
+      const lastPaymentDate = getLastPaymentDateForCurrentCycle(bill, transactions);
+
+      return {
+        ...bill,
+        paidAmount,
+        remainingAmount,
+        status,
+        lastPaymentDate,
+      };
+    });
+  }, [bills, transactions]);
 
   const filteredBills = useMemo(() => {
     const queryValue = search.trim().toLowerCase();
 
-    return bills.filter((bill) => {
-      const status = getBillStatus(bill);
-
+    return enrichedBills.filter((bill) => {
       const matchesSearch =
         !queryValue ||
         bill.name.toLowerCase().includes(queryValue) ||
@@ -316,75 +471,89 @@ async function handleDeleteBill(billId: string) {
       const matchesType = typeFilter === 'all' || bill.type === typeFilter;
       const matchesFrequency =
         frequencyFilter === 'all' || bill.frequency === frequencyFilter;
-      const matchesStatus = statusFilter === 'all' || status === statusFilter;
+      const matchesStatus = statusFilter === 'all' || bill.status === statusFilter;
 
       return matchesSearch && matchesType && matchesFrequency && matchesStatus;
     });
-  }, [bills, search, typeFilter, frequencyFilter, statusFilter]);
+  }, [enrichedBills, search, typeFilter, frequencyFilter, statusFilter]);
 
   const sections = useMemo(() => {
     return {
-      overdue: filteredBills.filter((bill) => getBillStatus(bill) === 'overdue'),
-      dueSoon: filteredBills.filter((bill) => getBillStatus(bill) === 'due-soon'),
-      upcoming: filteredBills.filter((bill) => getBillStatus(bill) === 'upcoming'),
-      paid: filteredBills.filter((bill) => getBillStatus(bill) === 'paid'),
+      overdue: filteredBills.filter((bill) => bill.status === 'overdue'),
+      dueSoon: filteredBills.filter((bill) => bill.status === 'due-soon'),
+      upcoming: filteredBills.filter((bill) => bill.status === 'upcoming'),
+      partial: filteredBills.filter((bill) => bill.status === 'partial'),
+      paid: filteredBills.filter((bill) => bill.status === 'paid'),
     };
   }, [filteredBills]);
 
   const summary = useMemo(() => {
-    const totalMonthlyEquivalent = bills.reduce((sum, bill) => {
+    const totalMonthlyEquivalent = enrichedBills.reduce((sum, bill) => {
       if (bill.frequency === 'monthly') return sum + bill.expectedAmount;
       if (bill.frequency === 'weekly') return sum + bill.expectedAmount * 4;
       return sum + bill.expectedAmount / 12;
     }, 0);
 
-    const overdueCount = bills.filter(
-      (bill) => getBillStatus(bill) === 'overdue'
+    const overdueCount = enrichedBills.filter(
+      (bill) => bill.status === 'overdue'
     ).length;
 
-    const dueSoonCount = bills.filter(
-      (bill) => getBillStatus(bill) === 'due-soon'
+    const dueSoonCount = enrichedBills.filter(
+      (bill) => bill.status === 'due-soon'
     ).length;
 
-    const remainingAmount = bills
-        .filter((bill) => {
-            const status = getBillStatus(bill);
-            return status === 'overdue' || status === 'due-soon' || status === 'upcoming';
-        })
-        .reduce((sum, bill) => sum + bill.expectedAmount, 0);
+    const remainingAmount = enrichedBills
+      .filter((bill) => bill.status !== 'paid')
+      .reduce((sum, bill) => sum + bill.remainingAmount, 0);
 
     return {
-      totalCount: bills.length,
+      totalCount: enrichedBills.length,
       totalMonthlyEquivalent,
       overdueCount,
       dueSoonCount,
       remainingAmount,
     };
-  }, [bills]);
+  }, [enrichedBills]);
 
-  function renderBillCard(bill: Bill) {
+  const loading = loadingBills || loadingTransactions;
+
+  if (!user) return null;
+
+  function renderBillCard(
+    bill: Bill & {
+      paidAmount: number;
+      remainingAmount: number;
+      status: BillStatus;
+      lastPaymentDate: Date | null;
+    }
+  ) {
     const dueDate = parseBillDate(bill.nextDueDate);
-    const status = getBillStatus(bill);
 
     let subtitle = 'No due date';
     if (dueDate) {
-        if (status === 'paid') {
-            subtitle = bill.lastPaidDate
-            ? `Paid on ${format(new Date(bill.lastPaidDate), 'MMM d, yyyy')}`
-            : 'Paid for this cycle';
-        } else if (status === 'overdue') {
-            subtitle = `Overdue since ${format(dueDate, 'MMM d, yyyy')}`;
-        } else if (status === 'due-soon') {
-            subtitle = `Due ${format(dueDate, 'MMM d, yyyy')}`;
-        } else {
-            subtitle = `Next due ${format(dueDate, 'MMM d, yyyy')}`;
-        }
+      if (bill.status === 'paid') {
+        subtitle = bill.lastPaymentDate
+          ? `Paid on ${format(bill.lastPaymentDate, 'MMM d, yyyy')}`
+          : 'Paid for this cycle';
+      } else if (bill.status === 'partial') {
+        subtitle = `${formatCurrency(bill.paidAmount)} paid • ${formatCurrency(
+          bill.remainingAmount
+        )} remaining`;
+      } else if (bill.status === 'overdue') {
+        subtitle = `Overdue since ${format(dueDate, 'MMM d, yyyy')}`;
+      } else if (bill.status === 'due-soon') {
+        subtitle = `Due ${format(dueDate, 'MMM d, yyyy')}`;
+      } else {
+        subtitle = `Next due ${format(dueDate, 'MMM d, yyyy')}`;
+      }
     }
 
     return (
       <Card
         key={bill.id}
-        className={`rounded-lg border shadow-sm transition-colors ${getBillCardClass(status)}`}
+        className={`rounded-lg border shadow-sm transition-colors ${getBillCardClass(
+          bill.status
+        )}`}
       >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
@@ -412,70 +581,115 @@ async function handleDeleteBill(billId: string) {
 
             <span
               className={`inline-flex shrink-0 rounded-full px-2 py-1 text-xs font-medium ring-1 ${getStatusBadgeClass(
-                status
+                bill.status
               )}`}
             >
-              {getStatusLabel(status)}
+              {getStatusLabel(bill.status)}
             </span>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-4">
-            <div className="text-3xl font-semibold text-slate-900">
-                {formatCurrency(bill.expectedAmount)}
-            </div>
+          <div className="text-3xl font-semibold text-slate-900">
+            {formatCurrency(bill.expectedAmount)}
+          </div>
 
-            <div className="flex items-center justify-between gap-3">
-                <span
-                    className={`text-sm ${
-                        status === 'overdue'
-                        ? 'font-medium text-rose-700'
-                        : status === 'due-soon'
-                            ? 'font-medium text-amber-700'
-                            : status === 'paid'
-                            ? 'font-medium text-emerald-700'
-                            : 'text-slate-500'
-                    }`}
-                >
-                    {subtitle}
+          {(bill.status === 'partial' || bill.status === 'paid') && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span>Payment progress</span>
+                <span>
+                  {formatCurrency(bill.paidAmount)} / {formatCurrency(bill.expectedAmount)}
                 </span>
-                <div className="flex items-center gap-2">
-                    <EditBillDialog userId={userId} bill={bill} />
+              </div>
+              <div className="h-2 rounded-full bg-slate-100">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    bill.status === 'paid' ? 'bg-emerald-500' : 'bg-indigo-600'
+                  }`}
+                  style={{
+                    width: `${Math.min(
+                      (bill.paidAmount / Math.max(bill.expectedAmount, 1)) * 100,
+                      100
+                    )}%`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="rounded-md border-rose-200 bg-white text-rose-700 hover:bg-rose-50 hover:text-rose-800"
-                        onClick={() => handleDeleteBill(bill.id)}
-                    >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                    </Button>
+          <div className="flex items-center justify-between gap-3">
+            <span
+              className={`text-sm ${
+                bill.status === 'overdue'
+                  ? 'font-medium text-rose-700'
+                  : bill.status === 'due-soon'
+                    ? 'font-medium text-amber-700'
+                    : bill.status === 'partial'
+                      ? 'font-medium text-indigo-700'
+                      : bill.status === 'paid'
+                        ? 'font-medium text-emerald-700'
+                        : 'text-slate-500'
+              }`}
+            >
+              {subtitle}
+            </span>
 
-                    {status !== 'paid' && (
-                        <Button
-                        type="button"
-                        variant={status === 'overdue' || status === 'due-soon' ? 'default' : 'outline'}
-                        size="sm"
-                        className={
-                            status === 'overdue' || status === 'due-soon'
-                            ? 'rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
-                            : 'rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800'
-                        }
-                        onClick={() => handleMarkPaid(bill)}
-                        >
-                        Mark Paid
-                        </Button>
-                    )}
-                </div>
+            <div className="flex items-center gap-2">
+              <EditBillDialog userId={userId} bill={bill} />
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-md border-rose-200 bg-white text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                onClick={() => handleDeleteBill(bill.id)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+
+              {bill.status !== 'paid' && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-md border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
+                    onClick={() => handleLogPartialPayment(bill, bill.remainingAmount)}
+                  >
+                    Log Payment
+                  </Button>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+                    onClick={() => handleMarkPaid(bill, bill.remainingAmount)}
+                  >
+                    {bill.status === 'partial' ? 'Finish Payment' : 'Mark Paid'}
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  function renderSection(title: string, description: string, billsForSection: Bill[]) {
+  function renderSection(
+    title: string,
+    description: string,
+    billsForSection: Array<
+      Bill & {
+        paidAmount: number;
+        remainingAmount: number;
+        status: BillStatus;
+        lastPaymentDate: Date | null;
+      }
+    >
+  ) {
     if (billsForSection.length === 0) return null;
 
     return (
@@ -502,7 +716,7 @@ async function handleDeleteBill(billId: string) {
             Bills & Subscriptions
           </h1>
           <p className="text-slate-500">
-            Track recurring expenses, spot what is due next, and stay ahead of payments.
+            Track recurring expenses, record payments, and stay ahead of due dates.
           </p>
         </div>
 
@@ -515,74 +729,74 @@ async function handleDeleteBill(billId: string) {
         />
       </div>
 
-        <div className="grid gap-4 md:grid-cols-4">
-            <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-500">
-                    Total recurring bills
-                </CardTitle>
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-700">
-                    <Receipt className="h-4 w-4" />
-                </div>
-                </CardHeader>
-                <CardContent>
-                <div className="text-2xl font-semibold text-slate-900">
-                    {summary.totalCount}
-                </div>
-                </CardContent>
-            </Card>
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-slate-500">
+              Total recurring bills
+            </CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+              <Receipt className="h-4 w-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold text-slate-900">
+              {summary.totalCount}
+            </div>
+          </CardContent>
+        </Card>
 
-            <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-500">
-                    Monthly equivalent
-                </CardTitle>
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-indigo-50 text-indigo-700">
-                    <CalendarClock className="h-4 w-4" />
-                </div>
-                </CardHeader>
-                <CardContent>
-                <div className="text-2xl font-semibold text-slate-900">
-                    {formatCurrency(summary.totalMonthlyEquivalent)}
-                </div>
-                </CardContent>
-            </Card>
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-slate-500">
+              Monthly equivalent
+            </CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-indigo-50 text-indigo-700">
+              <CalendarClock className="h-4 w-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold text-slate-900">
+              {formatCurrency(summary.totalMonthlyEquivalent)}
+            </div>
+          </CardContent>
+        </Card>
 
-            <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-500">
-                    Overdue / due soon
-                </CardTitle>
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-amber-50 text-amber-700">
-                    <AlertTriangle className="h-4 w-4" />
-                </div>
-                </CardHeader>
-                <CardContent>
-                <div className="text-2xl font-semibold text-slate-900">
-                    {summary.overdueCount + summary.dueSoonCount}
-                </div>
-                <p className="mt-1 text-sm text-slate-500">
-                    {summary.overdueCount} overdue, {summary.dueSoonCount} due soon
-                </p>
-                </CardContent>
-            </Card>
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-slate-500">
+              Overdue / due soon
+            </CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-amber-50 text-amber-700">
+              <AlertTriangle className="h-4 w-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold text-slate-900">
+              {summary.overdueCount + summary.dueSoonCount}
+            </div>
+            <p className="mt-1 text-sm text-slate-500">
+              {summary.overdueCount} overdue, {summary.dueSoonCount} due soon
+            </p>
+          </CardContent>
+        </Card>
 
-            <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-500">
-                    Remaining amount
-                </CardTitle>
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-sky-50 text-sky-700">
-                    <Wallet className="h-4 w-4" />
-                </div>
-                </CardHeader>
-                <CardContent>
-                <div className="text-2xl font-semibold text-slate-900">
-                    {formatCurrency(summary.remainingAmount)}
-                </div>
-                </CardContent>
-            </Card>
-        </div>
+        <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-slate-500">
+              Remaining amount
+            </CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-sky-50 text-sky-700">
+              <Wallet className="h-4 w-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold text-slate-900">
+              {formatCurrency(summary.remainingAmount)}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card className="rounded-lg border border-slate-200 bg-white shadow-sm">
         <CardHeader className="space-y-4">
@@ -590,7 +804,7 @@ async function handleDeleteBill(billId: string) {
             <div>
               <CardTitle className="text-slate-900">Bill manager</CardTitle>
               <CardDescription className="text-slate-500">
-                Search and filter recurring charges by type, frequency, or status.
+                Search and filter recurring charges by type, frequency, or payment status.
               </CardDescription>
             </div>
 
@@ -649,6 +863,7 @@ async function handleDeleteBill(billId: string) {
                   <SelectItem value="overdue">Overdue</SelectItem>
                   <SelectItem value="due-soon">Due soon</SelectItem>
                   <SelectItem value="upcoming">Upcoming</SelectItem>
+                  <SelectItem value="partial">Partial</SelectItem>
                   <SelectItem value="paid">Paid</SelectItem>
                 </SelectContent>
               </Select>
@@ -716,11 +931,18 @@ async function handleDeleteBill(billId: string) {
                 'Bills that are coming up later.',
                 sections.upcoming
               )}
-                {renderSection(
-                    'Paid',
-                    'Bills that have been marked as paid for the current cycle.',
-                    sections.paid
-                )}
+
+              {renderSection(
+                'Partially paid',
+                'Bills with one or more recorded payments that are not fully covered yet.',
+                sections.partial
+              )}
+
+              {renderSection(
+                'Paid',
+                'Bills fully covered for the current billing cycle.',
+                sections.paid
+              )}
             </div>
           )}
         </CardContent>
