@@ -40,7 +40,8 @@ The Firestore rules test starts a local emulator and requires Java 17 or newer.
 
 1. Add the production hostname to Firebase Authentication's authorized domains.
 2. Set `GEMINI_API_KEY` as a server-side environment variable if AI insights are enabled.
-3. Deploy the checked-in rules with `npx firebase deploy --only firestore:rules`.
+3. Deploy the checked-in rules to the configured named database with
+   `npx firebase deploy --only firestore:ai-studio-6bf3ec5e-f6f1-479a-a5df-b13a37f32e30`.
 4. Run the validation commands above against the release commit.
 5. Test Google sign-in, one transaction, one bill payment, and one budget on desktop and mobile.
 
