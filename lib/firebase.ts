@@ -15,23 +15,18 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
 export const loginWithGoogle = async () => {
-  const shouldRedirect =
-    typeof window !== 'undefined' &&
-    (/iPad|iPhone|iPod/.test(window.navigator.userAgent) || window.innerWidth < 768);
-
-  if (shouldRedirect) {
-    await signInWithRedirect(auth, googleProvider);
-    return;
-  }
-
   try {
     await signInWithPopup(auth, googleProvider);
   } catch (error) {
     const code = (error as { code?: string }).code;
+    const isSafari =
+      typeof window !== 'undefined' &&
+      /^((?!chrome|android).)*safari/i.test(window.navigator.userAgent);
+
     if (
-      code === 'auth/popup-blocked' ||
-      code === 'auth/web-storage-unsupported' ||
-      code === 'auth/operation-not-supported-in-this-environment'
+      !isSafari &&
+      (code === 'auth/popup-blocked' ||
+        code === 'auth/operation-not-supported-in-this-environment')
     ) {
       await signInWithRedirect(auth, googleProvider);
       return;
