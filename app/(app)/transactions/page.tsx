@@ -592,6 +592,7 @@ export default function TransactionsPage() {
       setIsUnlinking(true);
       await updateDoc(doc(db, path), {
         linkedRecurringId: null,
+        linkedRecurringDueDate: null,
       });
       setUnlinkTarget(null);
     } catch (error) {
@@ -637,6 +638,7 @@ export default function TransactionsPage() {
         if (!tx.linkedRecurringId) continue;
         batch.update(doc(db, `users/${user.uid}/transactions/${tx.id}`), {
           linkedRecurringId: null,
+          linkedRecurringDueDate: null,
         });
       }
 

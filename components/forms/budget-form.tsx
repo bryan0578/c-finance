@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Plus } from 'lucide-react';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
 
 import { useAuth } from '@/components/auth-provider';
 import { db } from '@/lib/firebase';
@@ -62,6 +62,7 @@ type BudgetFormProps = {
 export function BudgetForm({ trigger }: BudgetFormProps) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const form = useForm<BudgetFormInput, unknown, BudgetFormValues>({
     resolver: zodResolver(formSchema),
@@ -76,9 +77,18 @@ export function BudgetForm({ trigger }: BudgetFormProps) {
     const path = `users/${user.uid}/budgets`;
 
     try {
+      setSubmitError('');
+      const existing = await getDocs(
+        query(collection(db, path), where('category', '==', values.category.trim()))
+      );
+      if (!existing.empty) {
+        setSubmitError('A budget for this category already exists. Edit it instead.');
+        return;
+      }
+
       await addDoc(collection(db, path), {
         uid: user.uid,
-        category: values.category,
+        category: values.category.trim(),
         limit: values.limit,
         period: 'monthly',
         createdAt: serverTimestamp(),
@@ -87,6 +97,7 @@ export function BudgetForm({ trigger }: BudgetFormProps) {
       form.reset(defaultValues);
       setOpen(false);
     } catch (error) {
+      setSubmitError('The budget could not be created. Please try again.');
       handleFirestoreError(error, OperationType.CREATE, path);
     }
   }
@@ -96,6 +107,7 @@ export function BudgetForm({ trigger }: BudgetFormProps) {
 
     if (!nextOpen) {
       form.reset(defaultValues);
+      setSubmitError('');
     }
   }
 
@@ -170,6 +182,7 @@ export function BudgetForm({ trigger }: BudgetFormProps) {
                 )}
               />
 
+              {submitError && <p className="text-sm text-rose-700" role="alert">{submitError}</p>}
               <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
                 <Button
                   type="button"

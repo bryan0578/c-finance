@@ -34,33 +34,40 @@ service cloud.firestore {
     }
 
     function isValidTransaction() {
-      return hasOnlyAllowedFields(['uid', 'type', 'amount', 'category', 'date', 'note', 'linkedRecurringId']) &&
+      return hasOnlyAllowedFields(['uid', 'type', 'amount', 'category', 'date', 'note', 'linkedRecurringId', 'linkedRecurringDueDate', 'createdAt', 'updatedAt']) &&
              request.resource.data.uid is string &&
              request.resource.data.type in ['income', 'expense'] &&
              request.resource.data.amount is number && request.resource.data.amount >= 0 &&
              request.resource.data.category is string && request.resource.data.category.size() < 100 &&
              request.resource.data.date is string &&
              (!('note' in request.resource.data) || (request.resource.data.note is string && request.resource.data.note.size() < 500)) &&
-             (!('linkedRecurringId' in request.resource.data) || request.resource.data.linkedRecurringId is string);
+             (!('linkedRecurringId' in request.resource.data) || request.resource.data.linkedRecurringId is string || request.resource.data.linkedRecurringId == null) &&
+             (!('linkedRecurringDueDate' in request.resource.data) || request.resource.data.linkedRecurringDueDate is string || request.resource.data.linkedRecurringDueDate == null) &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp) &&
+             (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp);
     }
 
     function isValidRecurring() {
-      return hasOnlyAllowedFields(['uid', 'name', 'type', 'expectedAmount', 'frequency', 'nextDueDate', 'autoPay']) &&
+      return hasOnlyAllowedFields(['uid', 'name', 'type', 'expectedAmount', 'frequency', 'nextDueDate', 'autoPay', 'createdAt', 'updatedAt']) &&
              request.resource.data.uid is string &&
              request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() < 100 &&
              request.resource.data.type in ['fixed', 'variable', 'subscription'] &&
              request.resource.data.expectedAmount is number && request.resource.data.expectedAmount >= 0 &&
              request.resource.data.frequency in ['monthly', 'yearly', 'weekly'] &&
              request.resource.data.nextDueDate is string &&
-             request.resource.data.autoPay is bool;
+             request.resource.data.autoPay is bool &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp) &&
+             (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp);
     }
 
     function isValidBudget() {
-      return hasOnlyAllowedFields(['uid', 'category', 'limit', 'period']) &&
+      return hasOnlyAllowedFields(['uid', 'category', 'limit', 'period', 'createdAt', 'updatedAt']) &&
              request.resource.data.uid is string &&
              request.resource.data.category is string && request.resource.data.category.size() > 0 && request.resource.data.category.size() < 100 &&
              request.resource.data.limit is number && request.resource.data.limit >= 0 &&
-             request.resource.data.period in ['monthly'];
+             request.resource.data.period in ['monthly'] &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp) &&
+             (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp);
     }
 
     match /users/{userId} {

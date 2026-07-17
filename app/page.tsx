@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
 import { loginWithGoogle } from '@/lib/firebase';
@@ -17,6 +17,16 @@ import {
 export default function HomePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [signInError, setSignInError] = useState('');
+
+  async function handleSignIn() {
+    try {
+      setSignInError('');
+      await loginWithGoogle();
+    } catch {
+      setSignInError('Sign-in did not complete. Please try again.');
+    }
+  }
 
   useEffect(() => {
     if (!loading && user) {
@@ -56,7 +66,7 @@ export default function HomePage() {
             <Button
               size="lg"
               className="min-w-[220px] rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
-              onClick={loginWithGoogle}
+              onClick={handleSignIn}
             >
               <LogIn className="mr-2 h-5 w-5" />
               Sign in with Google
@@ -67,6 +77,9 @@ export default function HomePage() {
               <ArrowRight className="ml-1 h-4 w-4" />
             </div>
           </div>
+          {signInError && (
+            <p className="mt-3 text-sm text-rose-700" role="alert">{signInError}</p>
+          )}
         </div>
 
         <div className="mx-auto mt-14 grid w-full max-w-5xl gap-4 md:grid-cols-3">
