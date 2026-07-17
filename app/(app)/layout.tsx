@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
 import { Sidebar } from '@/components/layout/sidebar';
+import { MobileNav } from '@/components/layout/mobile-nav';
 
 export default function AppLayout({
   children,
@@ -39,9 +40,12 @@ export default function AppLayout({
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900">
       <Sidebar />
-      <main className="min-w-0 flex-1 overflow-y-auto">
-        <div className="p-6 md:p-8">{children}</div>
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <MobileNav />
+        <main className="min-w-0 flex-1 overflow-y-auto">
+          <div className="p-4 sm:p-6 md:p-8">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

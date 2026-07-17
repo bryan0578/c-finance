@@ -203,6 +203,7 @@ export function TransactionForm({ trigger }: TransactionFormProps) {
 
     try {
       let linkedRecurringId: string | undefined;
+      let linkedRecurringDueDate: string | undefined;
 
       if (values.type === 'expense') {
         const billsSnapshot = await getDocs(collection(db, billsPath));
@@ -222,6 +223,7 @@ export function TransactionForm({ trigger }: TransactionFormProps) {
         });
 
         linkedRecurringId = matchedBill?.id;
+        linkedRecurringDueDate = matchedBill?.nextDueDate;
       }
 
       await addDoc(collection(db, txPath), {
@@ -232,6 +234,7 @@ export function TransactionForm({ trigger }: TransactionFormProps) {
         date: values.date,
         note: values.note || '',
         ...(linkedRecurringId ? { linkedRecurringId } : {}),
+        ...(linkedRecurringDueDate ? { linkedRecurringDueDate } : {}),
         createdAt: serverTimestamp(),
       });
 

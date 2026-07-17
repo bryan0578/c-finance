@@ -10,8 +10,8 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: 'Finance AI',
-  description: 'Track your income, bills, budgets, and insights.',
+  title: 'C-Finance',
+  description: 'Your personal finance command center for income, bills, budgets, and insights.',
 };
 
 export default function RootLayout({

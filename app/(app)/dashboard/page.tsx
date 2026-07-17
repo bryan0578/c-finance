@@ -29,6 +29,7 @@ import {
 import { useAuth } from '@/components/auth-provider';
 import { db } from '@/lib/firebase';
 import { handleFirestoreError, OperationType } from '@/lib/firestore-error';
+import { getBillStatus as getSharedBillStatus } from '@/lib/billing';
 
 import {
   Card,
@@ -55,6 +56,8 @@ interface Transaction {
   category: string;
   date: string;
   note?: string;
+  linkedRecurringId?: string;
+  linkedRecurringDueDate?: string;
 }
 
 interface Bill {
@@ -280,23 +283,24 @@ export default function DashboardPage() {
   }, [transactions]);
 
   const overdueBills = useMemo(
-    () => bills.filter((bill) => getBillUrgency(bill) === 'overdue'),
-    [bills]
+    () => bills.filter((bill) => getSharedBillStatus(bill, transactions) === 'overdue'),
+    [bills, transactions]
   );
 
   const dueSoonBills = useMemo(
-    () => bills.filter((bill) => getBillUrgency(bill) === 'due-soon'),
-    [bills]
+    () => bills.filter((bill) => getSharedBillStatus(bill, transactions) === 'due-soon'),
+    [bills, transactions]
   );
 
   const upcomingBills = useMemo(() => {
     return bills
       .filter((b) => {
         const dueDate = parseDate(b.nextDueDate);
-        return dueDate ? !isPast(dueDate) || isToday(dueDate) : false;
+        const status = getSharedBillStatus(b, transactions);
+        return status !== 'paid' && (dueDate ? !isPast(dueDate) || isToday(dueDate) : false);
       })
       .slice(0, 4);
-  }, [bills]);
+  }, [bills, transactions]);
 
   const topCategory = useMemo(() => {
     const categoryTotals: Record<string, number> = {};
@@ -347,6 +351,7 @@ export default function DashboardPage() {
   }, [budgets, filteredTransactions]);
 
   const generateInsights = async () => {
+    if (!user) return;
     setLoadingInsights(true);
 
     try {
@@ -367,7 +372,10 @@ export default function DashboardPage() {
 
       const response = await fetch('/api/insights', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${await user.getIdToken()}`,
+        },
         body: JSON.stringify({
           totalIncome,
           totalExpense,
@@ -381,7 +389,10 @@ export default function DashboardPage() {
       });
 
       const data = await response.json();
-      setInsights(data.insights);
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate insights');
+      }
+      setInsights(data.insights || 'No insights were generated.');
     } catch (error) {
       console.error('Failed to generate insights', error);
       setInsights('Failed to generate insights. Please try again later.');

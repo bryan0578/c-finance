@@ -68,9 +68,9 @@ export function Sidebar() {
             </div>
             <div>
               <h1 className="text-base font-semibold tracking-tight text-slate-900">
-                Finance AI
+                C-Finance
               </h1>
-              <p className="text-xs text-slate-500">Personal finance workspace</p>
+              <p className="text-xs text-slate-500">Your finance command center</p>
             </div>
           </div>
         </Link>

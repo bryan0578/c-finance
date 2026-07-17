@@ -19,6 +19,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  updateDoc,
 } from 'firebase/firestore';
 import {
   AlertTriangle,
@@ -34,6 +35,7 @@ import {
 import { useAuth } from '@/components/auth-provider';
 import { db } from '@/lib/firebase';
 import { handleFirestoreError, OperationType } from '@/lib/firestore-error';
+import { advanceDueDate, getPaidAmountForBill } from '@/lib/billing';
 
 import {
   Card,
@@ -75,6 +77,7 @@ interface Transaction {
   date: string;
   note?: string;
   linkedRecurringId?: string;
+  linkedRecurringDueDate?: string;
 }
 
 type TypeFilter = 'all' | BillType;
@@ -135,6 +138,9 @@ function normalizeTransaction(raw: any): Transaction {
     note: raw.note ? String(raw.note) : '',
     linkedRecurringId: raw.linkedRecurringId
       ? String(raw.linkedRecurringId)
+      : undefined,
+    linkedRecurringDueDate: raw.linkedRecurringDueDate
+      ? String(raw.linkedRecurringDueDate)
       : undefined,
   };
 }
@@ -221,24 +227,7 @@ function getCycleStartDate(bill: Bill, dueDate: Date) {
 }
 
 function getPaidAmountForCurrentCycle(bill: Bill, transactions: Transaction[]) {
-  const dueDate = parseBillDate(bill.nextDueDate);
-  if (!dueDate) return 0;
-
-  const cycleStart = startOfDay(getCycleStartDate(bill, dueDate));
-  const cycleEnd = startOfDay(dueDate);
-
-  return transactions
-    .filter((tx) => {
-      if (tx.type !== 'expense') return false;
-      if (tx.linkedRecurringId !== bill.id) return false;
-
-      const txDate = parseTransactionDate(tx.date);
-      if (!txDate) return false;
-
-      const txDay = startOfDay(txDate);
-      return txDay >= cycleStart && txDay <= cycleEnd;
-    })
-    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  return getPaidAmountForBill(bill, transactions);
 }
 
 function getLastPaymentDateForCurrentCycle(bill: Bill, transactions: Transaction[]) {
@@ -252,6 +241,10 @@ function getLastPaymentDateForCurrentCycle(bill: Bill, transactions: Transaction
     .filter((tx) => {
       if (tx.type !== 'expense') return false;
       if (tx.linkedRecurringId !== bill.id) return false;
+
+      if (tx.linkedRecurringDueDate) {
+        return tx.linkedRecurringDueDate === bill.nextDueDate;
+      }
 
       const txDate = parseTransactionDate(tx.date);
       if (!txDate) return false;
@@ -392,6 +385,7 @@ export default function BillsPage() {
         date: new Date().toISOString().split('T')[0],
         note,
         linkedRecurringId: bill.id,
+        linkedRecurringDueDate: bill.nextDueDate,
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, txPath);
@@ -410,6 +404,15 @@ export default function BillsPage() {
       remainingAmount,
       `Paid ${bill.name}`
     );
+
+    const billPath = `users/${userId}/recurring/${bill.id}`;
+    try {
+      await updateDoc(doc(db, billPath), {
+        nextDueDate: advanceDueDate(bill.nextDueDate, bill.frequency),
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, billPath);
+    }
   }
 
   async function handleLogPartialPayment(
@@ -431,6 +434,11 @@ export default function BillsPage() {
 
     if (Number.isNaN(amount) || amount <= 0) {
       window.alert('Please enter a valid payment amount greater than 0.');
+      return;
+    }
+
+    if (amount > remainingAmount) {
+      window.alert(`Payment cannot exceed the remaining ${formatCurrency(remainingAmount)}.`);
       return;
     }
 

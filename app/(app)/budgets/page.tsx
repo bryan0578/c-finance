@@ -8,6 +8,7 @@ import { handleFirestoreError, OperationType } from '@/lib/firestore-error';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { BudgetForm } from '@/components/forms/budget-form';
+import { EditBudgetDialog } from '@/components/forms/edit-budget-dialog';
 
 interface Budget {
   id: string;
@@ -66,7 +67,7 @@ export default function BudgetsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Budgets</h1>
           <p className="text-gray-500">Monitor your spending limits for this month.</p>
@@ -88,11 +89,14 @@ export default function BudgetsPage() {
             return (
               <Card key={budget.id}>
                 <CardHeader className="pb-2">
-                  <div className="flex justify-between items-center">
+                  <div className="flex items-start justify-between gap-3">
                     <CardTitle className="text-lg">{budget.category}</CardTitle>
-                    <span className={`text-sm font-medium ${isOver ? 'text-red-600' : 'text-gray-500'}`}>
-                      ${spent.toFixed(2)} / ${budget.limit.toFixed(2)}
-                    </span>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className={`text-sm font-medium ${isOver ? 'text-red-600' : 'text-gray-500'}`}>
+                        ${spent.toFixed(2)} / ${budget.limit.toFixed(2)}
+                      </span>
+                      <EditBudgetDialog userId={user.uid} budget={budget} />
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
