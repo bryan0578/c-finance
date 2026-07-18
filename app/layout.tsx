@@ -12,9 +12,23 @@ const geist = Geist({
 export const metadata: Metadata = {
   title: 'C-Finance',
   description: 'Your personal finance command center for income, bills, budgets, and insights.',
+  applicationName: 'C-Finance',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: 'C-Finance',
+    statusBarStyle: 'black-translucent',
+  },
   icons: {
     icon: '/c-finance-logo.svg',
     shortcut: '/c-finance-logo.svg',
+    apple: [
+      {
+        url: '/icons/apple-touch-icon.png',
+        sizes: '180x180',
+        type: 'image/png',
+      },
+    ],
   },
 };
 

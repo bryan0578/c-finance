@@ -1,0 +1,30 @@
+import type { MetadataRoute } from 'next';
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    id: '/',
+    name: 'C-Finance',
+    short_name: 'C-Finance',
+    description:
+      'Your personal finance command center for income, bills, budgets, and insights.',
+    start_url: '/dashboard',
+    scope: '/',
+    display: 'standalone',
+    background_color: '#07121f',
+    theme_color: '#07121f',
+    icons: [
+      {
+        src: '/icons/icon-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icons/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+    ],
+  };
+}
