@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
 import { loginWithGoogle } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
+import { CFinanceLogo } from '@/components/brand/c-finance-logo';
 import {
   LogIn,
   Sparkles,
@@ -48,6 +49,7 @@ export default function HomePage() {
     <main className="min-h-screen bg-slate-50">
       <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center px-6 py-16 md:px-10">
         <div className="mx-auto w-full max-w-3xl text-center">
+          <CFinanceLogo className="mx-auto mb-5 h-24 w-24 sm:h-28 sm:w-28" priority />
           <div className="mb-6 inline-flex items-center rounded-full border border-indigo-100 bg-indigo-50 px-4 py-1.5 text-sm text-indigo-700">
             <Sparkles className="mr-2 h-4 w-4" />
             Your personal finance copilot
