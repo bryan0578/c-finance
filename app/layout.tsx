@@ -12,6 +12,10 @@ const geist = Geist({
 export const metadata: Metadata = {
   title: 'C-Finance',
   description: 'Your personal finance command center for income, bills, budgets, and insights.',
+  icons: {
+    icon: '/c-finance-logo.svg',
+    shortcut: '/c-finance-logo.svg',
+  },
 };
 
 export default function RootLayout({

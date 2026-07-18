@@ -7,6 +7,7 @@ import { CalendarSync, LayoutDashboard, LogOut, Menu, Receipt, Wallet } from 'lu
 import { logout } from '@/lib/firebase';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { CFinanceLogo } from '@/components/brand/c-finance-logo';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 const navItems = [
@@ -28,9 +29,7 @@ export function MobileNav() {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 md:hidden">
       <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-slate-900">
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100">
-          <Wallet className="h-5 w-5" />
-        </span>
+        <CFinanceLogo className="h-9 w-9" priority />
         C-Finance
       </Link>
 
@@ -42,7 +41,10 @@ export function MobileNav() {
         </SheetTrigger>
         <SheetContent side="right" className="w-[300px] p-0">
           <div className="border-b border-slate-200 px-5 py-5">
-            <SheetTitle>C-Finance</SheetTitle>
+            <SheetTitle className="flex items-center gap-2">
+              <CFinanceLogo className="h-8 w-8" />
+              C-Finance
+            </SheetTitle>
             <p className="mt-1 text-sm text-slate-500">Your finance command center</p>
           </div>
           <nav className="space-y-2 p-4">
