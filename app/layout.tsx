@@ -12,15 +12,12 @@ export const metadata: Metadata = {
   title: 'C-Finance',
   description: 'Your personal finance command center for income, bills, budgets, and insights.',
   applicationName: 'C-Finance',
-  manifest: '/manifest.webmanifest?v=portfolio-1',
+  manifest: '/manifest.webmanifest?v=portfolio-2',
   appleWebApp: { capable: true, title: 'C-Finance', statusBarStyle: 'black-translucent' },
   icons: {
-    icon: [
-      { url: '/icons/icon-192.png?v=portfolio-1', sizes: '192x192', type: 'image/png' },
-      { url: '/icons/icon-512.png?v=portfolio-1', sizes: '512x512', type: 'image/png' },
-    ],
-    shortcut: '/c-finance-logo.svg',
-    apple: [{ url: '/icons/apple-touch-icon.png?v=portfolio-1', sizes: '180x180', type: 'image/png' }],
+    icon: [{ url: '/icons/portfolio-icon.svg?v=portfolio-2', type: 'image/svg+xml' }],
+    shortcut: '/icons/portfolio-icon.svg?v=portfolio-2',
+    apple: [{ url: '/icons/portfolio-icon.svg?v=portfolio-2', type: 'image/svg+xml' }],
   },
 };
 
