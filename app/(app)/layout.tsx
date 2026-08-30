@@ -22,10 +22,10 @@ export default function AppLayout({
 
   if (loading) {
     return (
-      <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900">
-        <div className="hidden w-64 shrink-0 border-r border-slate-200 bg-white md:block" />
-        <div className="flex flex-1 items-center justify-center">
-          <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
+      <div className="flex h-dvh min-h-0 overflow-hidden bg-background text-foreground">
+        <div className="hidden w-64 shrink-0 border-r border-border bg-card md:block" />
+        <div className="flex flex-1 items-center justify-center p-4">
+          <div className="rounded-2xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
             Loading your workspace...
           </div>
         </div>
@@ -38,12 +38,14 @@ export default function AppLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900">
+    <div className="flex h-dvh min-h-0 overflow-hidden bg-background text-foreground">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileNav />
-        <main className="min-w-0 flex-1 overflow-y-auto">
-          <div className="p-4 sm:p-6 md:p-8">{children}</div>
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain">
+          <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6 md:p-8">
+            {children}
+          </div>
         </main>
       </div>
     </div>

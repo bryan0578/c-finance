@@ -27,25 +27,25 @@ export function MobileNav() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 md:hidden">
-      <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-slate-900">
+    <header className="sticky top-0 z-30 flex min-h-[calc(4rem+env(safe-area-inset-top))] items-end justify-between border-b border-border bg-background/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl md:hidden">
+      <Link href="/dashboard" className="flex min-h-11 items-center gap-2 font-semibold text-foreground">
         <CFinanceLogo className="h-9 w-9" priority />
-        C-Finance
+        <span className="tracking-tight">C-Finance</span>
       </Link>
 
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="outline" size="icon" aria-label="Open navigation">
+          <Button variant="outline" size="icon" className="h-11 w-11 border-border bg-card text-foreground" aria-label="Open navigation">
             <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="right" className="w-[300px] p-0">
-          <div className="border-b border-slate-200 px-5 py-5">
-            <SheetTitle className="flex items-center gap-2">
+        <SheetContent side="right" className="w-[min(88vw,320px)] border-border bg-popover p-0 text-popover-foreground">
+          <div className="border-b border-border px-5 pb-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
+            <SheetTitle className="flex items-center gap-2 text-popover-foreground">
               <CFinanceLogo className="h-8 w-8" />
               C-Finance
             </SheetTitle>
-            <p className="mt-1 text-sm text-slate-500">Your finance command center</p>
+            <p className="mt-1 text-sm text-muted-foreground">Your finance command center</p>
           </div>
           <nav className="space-y-2 p-4">
             {navItems.map((item) => {
@@ -56,10 +56,10 @@ export function MobileNav() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium',
+                    'flex min-h-12 items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors',
                     active
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -68,10 +68,10 @@ export function MobileNav() {
               );
             })}
           </nav>
-          <div className="absolute inset-x-4 bottom-4">
+          <div className="absolute inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))]">
             <Button
               variant="outline"
-              className="w-full justify-start border-rose-200 text-rose-700 hover:bg-rose-50"
+              className="min-h-11 w-full justify-start border-destructive/35 text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={handleLogout}
             >
               <LogOut className="mr-2 h-4 w-4" />

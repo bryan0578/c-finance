@@ -40,35 +40,39 @@ export function ExpenseChart({ transactions }: ExpenseChartProps) {
       name,
       total,
     }))
-    .sort((a, b) => b.total - a.total);
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10);
 
   if (chartData.length === 0) {
     return (
-      <div className="flex h-[350px] items-center justify-center text-sm text-muted-foreground">
-        No expense data for this month yet.
+      <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
+        No expense data for this period yet.
       </div>
     );
   }
 
   return (
-    <ResponsiveContainer width="100%" height={350}>
-      <BarChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+    <ResponsiveContainer width="100%" height={320}>
+      <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
         <XAxis
           dataKey="name"
-          stroke="#888888"
-          fontSize={12}
+          stroke="var(--muted-foreground)"
+          fontSize={11}
           tickLine={false}
           axisLine={false}
+          interval="preserveStartEnd"
+          tickFormatter={(value) => String(value).length > 12 ? `${String(value).slice(0, 11)}…` : String(value)}
         />
         <YAxis
-          stroke="#888888"
-          fontSize={12}
+          stroke="var(--muted-foreground)"
+          fontSize={11}
           tickLine={false}
           axisLine={false}
-          tickFormatter={(value) => `$${value}`}
+          width={52}
+          tickFormatter={(value) => `$${Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
         />
         <Tooltip
-          cursor={{ fill: 'transparent' }}
+          cursor={{ fill: 'color-mix(in srgb, var(--primary) 6%, transparent)' }}
           formatter={(value) => {
             const numericValue =
               typeof value === 'number'
@@ -76,19 +80,22 @@ export function ExpenseChart({ transactions }: ExpenseChartProps) {
                 : typeof value === 'string'
                   ? Number(value)
                   : 0;
-            return [`$${numericValue.toFixed(2)}`, 'Amount'];
+            return [numericValue.toLocaleString('en-US', { style: 'currency', currency: 'USD' }), 'Amount'];
           }}
           contentStyle={{
-            borderRadius: '8px',
-            border: '1px solid hsl(var(--border))',
-            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+            borderRadius: '12px',
+            border: '1px solid var(--border)',
+            background: 'var(--popover)',
+            color: 'var(--popover-foreground)',
+            boxShadow: '0 18px 42px rgb(0 0 0 / 0.24)',
           }}
+          labelStyle={{ color: 'var(--popover-foreground)', fontWeight: 600 }}
+          itemStyle={{ color: 'var(--popover-foreground)' }}
         />
         <Bar
           dataKey="total"
-          fill="currentColor"
-          radius={[4, 4, 0, 0]}
-          className="fill-primary"
+          fill="var(--primary)"
+          radius={[6, 6, 0, 0]}
         />
       </BarChart>
     </ResponsiveContainer>
