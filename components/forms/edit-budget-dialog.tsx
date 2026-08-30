@@ -28,6 +28,7 @@ export function EditBudgetDialog({ userId, budget }: EditBudgetDialogProps) {
   const [limit, setLimit] = useState(String(budget.limit));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const path = `users/${userId}/budgets/${budget.id}`;
 
@@ -58,9 +59,14 @@ export function EditBudgetDialog({ userId, budget }: EditBudgetDialogProps) {
   }
 
   async function handleDelete() {
-    if (!window.confirm(`Delete the ${budget.category} budget?`)) return;
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
+
     try {
       setSaving(true);
+      setError('');
       await deleteDoc(doc(db, path));
       setOpen(false);
     } catch (caught) {
@@ -71,10 +77,20 @@ export function EditBudgetDialog({ userId, budget }: EditBudgetDialogProps) {
     }
   }
 
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (!nextOpen) {
+      setCategory(budget.category);
+      setLimit(String(budget.limit));
+      setError('');
+      setConfirmingDelete(false);
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="min-h-11 rounded-xl border-border bg-card text-foreground hover:bg-secondary">
           <Pencil className="mr-2 h-4 w-4" /> Edit
         </Button>
       </DialogTrigger>
@@ -96,18 +112,31 @@ export function EditBudgetDialog({ userId, budget }: EditBudgetDialogProps) {
             <Input
               id={`budget-limit-${budget.id}`}
               type="number"
+              inputMode="decimal"
               min="0.01"
               step="0.01"
               value={limit}
               onChange={(event) => setLimit(event.target.value)}
             />
           </div>
-          {error && <p className="text-sm text-rose-700" role="alert">{error}</p>}
+          {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+          {confirmingDelete && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              Delete the {budget.category} budget? This removes the budget limit, not your transactions.
+            </div>
+          )}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-            <Button type="button" variant="outline" className="border-rose-200 text-rose-700" onClick={handleDelete} disabled={saving}>
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            <Button
+              type="button"
+              variant="outline"
+              className={confirmingDelete ? 'border-destructive/50 bg-destructive text-white hover:bg-destructive/90' : 'border-destructive/35 text-destructive hover:bg-destructive/10 hover:text-destructive'}
+              onClick={handleDelete}
+              disabled={saving}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {confirmingDelete ? 'Confirm delete' : 'Delete budget'}
             </Button>
-            <Button type="submit" className="bg-indigo-600 text-white hover:bg-indigo-700" disabled={saving}>
+            <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={saving}>
               {saving ? 'Saving...' : 'Save changes'}
             </Button>
           </div>
