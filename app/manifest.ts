@@ -13,9 +13,18 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#07121f',
     categories: ['finance', 'productivity'],
     icons: [
-      { src: '/icons/icon-192.png?v=portfolio-1', sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: '/icons/icon-512.png?v=portfolio-1', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/icons/icon-maskable-512.png?v=portfolio-1', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      {
+        src: '/icons/portfolio-icon.svg?v=portfolio-2',
+        sizes: 'any',
+        type: 'image/svg+xml',
+        purpose: 'any',
+      },
+      {
+        src: '/icons/portfolio-icon-maskable.svg?v=portfolio-2',
+        sizes: 'any',
+        type: 'image/svg+xml',
+        purpose: 'maskable',
+      },
     ],
   };
 }
