@@ -53,28 +53,58 @@ body {
 :focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
 button, a, input, select, textarea, [role="button"] { -webkit-tap-highlight-color: transparent; }
 
+[data-slot="card"] {
+  border-radius: 1rem;
+  border-color: var(--border) !important;
+  background-color: color-mix(in srgb, var(--card) 96%, transparent) !important;
+  box-shadow: 0 16px 42px rgb(0 0 0 / 0.12);
+}
+
+[data-slot="table-container"] {
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--input) transparent;
+}
+
 /* Compatibility layer for the original slate/indigo dashboard utilities.
    This lets the large data screens inherit the new C-Finance system while
    interaction-heavy components are progressively moved to semantic tokens. */
 .dark [class~="bg-white"] { background-color: var(--card) !important; }
 .dark [class~="bg-slate-50"],
+.dark [class~="bg-slate-50/40"],
 .dark [class~="bg-slate-50/60"],
-.dark [class~="bg-slate-50/70"] { background-color: var(--secondary) !important; }
+.dark [class~="bg-slate-50/70"],
+.dark [class~="bg-slate-50/80"],
+.dark [class~="bg-slate-100"] { background-color: var(--secondary) !important; }
 .dark [class~="border-slate-200"] { border-color: var(--border) !important; }
 .dark [class~="text-slate-900"],
 .dark [class~="text-slate-800"],
 .dark [class~="text-slate-700"] { color: var(--foreground) !important; }
 .dark [class~="text-slate-600"],
-.dark [class~="text-slate-500"] { color: var(--muted-foreground) !important; }
-.dark [class~="bg-indigo-600"] { background-color: var(--primary) !important; }
+.dark [class~="text-slate-500"],
+.dark [class~="text-slate-400"] { color: var(--muted-foreground) !important; }
+.dark [class~="bg-indigo-600"] {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
 .dark [class~="bg-indigo-50"],
+.dark [class~="bg-indigo-50/50"],
 .dark [class~="bg-indigo-100"] { background-color: var(--accent) !important; }
 .dark [class~="text-indigo-700"],
-.dark [class~="text-indigo-800"] { color: var(--accent-foreground) !important; }
+.dark [class~="text-indigo-800"],
+.dark [class~="text-indigo-900"] { color: var(--accent-foreground) !important; }
 .dark [class~="border-indigo-200"] { border-color: color-mix(in srgb, var(--primary) 35%, var(--border)) !important; }
-.dark [class~="hover:bg-indigo-700"]:hover { background-color: color-mix(in srgb, var(--primary) 86%, black) !important; }
+.dark [class~="ring-indigo-100"],
+.dark [class~="ring-indigo-200"] { --tw-ring-color: color-mix(in srgb, var(--primary) 30%, transparent) !important; }
+.dark [class~="hover:bg-indigo-700"]:hover {
+  background-color: color-mix(in srgb, var(--primary) 86%, black) !important;
+  color: var(--primary-foreground) !important;
+}
 .dark [class~="hover:bg-indigo-50"]:hover,
-.dark [class~="hover:bg-slate-50"]:hover { background-color: var(--secondary) !important; }
+.dark [class~="hover:bg-slate-50"]:hover,
+.dark [class~="hover:bg-slate-50/80"]:hover,
+.dark [class~="hover:bg-slate-50/40"]:hover { background-color: var(--secondary) !important; }
 .dark [class~="hover:text-indigo-800"]:hover,
 .dark [class~="hover:text-slate-900"]:hover { color: var(--foreground) !important; }
 .dark [class~="hover:border-slate-200"]:hover { border-color: var(--border) !important; }
@@ -117,6 +147,26 @@ button, a, input, select, textarea, [role="button"] { -webkit-tap-highlight-colo
     margin-left: -0.25rem;
     padding: 0.75rem 0.25rem max(1rem, env(safe-area-inset-bottom));
     background: linear-gradient(to top, var(--popover) 78%, transparent);
+  }
+
+  [data-slot="table"] {
+    min-width: 720px;
+  }
+
+  [data-slot="table-container"] {
+    margin-inline: -0.25rem;
+    padding-inline: 0.25rem;
+    scroll-padding-inline: 0.75rem;
+  }
+
+  [data-slot="select-trigger"] {
+    min-height: 44px;
+    width: 100% !important;
+  }
+
+  input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
   }
 }
 
