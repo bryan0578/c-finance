@@ -146,8 +146,12 @@ button, a, input, select, textarea, [role="button"] { -webkit-tap-highlight-colo
 .dark [class~="text-amber-700"] { color: #f5c66e !important; }
 
 @media (max-width: 768px) {
-  input, select, textarea { font-size: 16px !important; }
-  button, [role="button"], nav a { min-height: 44px; }
+  input, select, textarea {
+    min-height: 44px;
+    font-size: 16px !important;
+  }
+
+  button, [role="button"], nav a, [data-slot="select-item"] { min-height: 44px; }
   [role="dialog"] { max-height: min(92dvh, 760px); }
 
   [data-slot="dialog-content"] {
