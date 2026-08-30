@@ -1,0 +1,64 @@
+/* C-Finance — high-trust personal finance, distinct from Dorsyth Ledger. */
+:root {
+  --background: #f4f7f7;
+  --foreground: #132329;
+  --card: #ffffff;
+  --card-foreground: #132329;
+  --popover: #ffffff;
+  --popover-foreground: #132329;
+  --primary: #0c5f58;
+  --primary-foreground: #f6fffc;
+  --secondary: #e6efed;
+  --secondary-foreground: #173d3a;
+  --muted: #eaf0ef;
+  --muted-foreground: #607277;
+  --accent: #dff3ec;
+  --accent-foreground: #174b43;
+  --destructive: #b64842;
+  --border: #d5e0de;
+  --input: #cbd9d7;
+  --ring: #1e8b7e;
+  --radius: .75rem;
+}
+
+.dark {
+  --background: #07121f;
+  --foreground: #ecf6f4;
+  --card: #0c1b29;
+  --card-foreground: #ecf6f4;
+  --popover: #102130;
+  --popover-foreground: #ecf6f4;
+  --primary: #67d6b0;
+  --primary-foreground: #071712;
+  --secondary: #142737;
+  --secondary-foreground: #dce9e7;
+  --muted: #112330;
+  --muted-foreground: #91a7aa;
+  --accent: #15372f;
+  --accent-foreground: #9ce6cd;
+  --destructive: #e0746e;
+  --border: #203746;
+  --input: #274455;
+  --ring: #67d6b0;
+}
+
+html, body { background: var(--background); }
+body {
+  background-image:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 34rem),
+    linear-gradient(180deg, color-mix(in srgb, var(--background) 98%, white), var(--background));
+  color: var(--foreground);
+}
+
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+button, a, input, select, textarea, [role="button"] { -webkit-tap-highlight-color: transparent; }
+
+@media (max-width: 768px) {
+  input, select, textarea { font-size: 16px !important; }
+  button, [role="button"], nav a { min-height: 44px; }
+  [role="dialog"] { max-height: min(92dvh, 760px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
