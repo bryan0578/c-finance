@@ -84,7 +84,9 @@ button, a, input, select, textarea, [role="button"] { -webkit-tap-highlight-colo
 .dark [class~="text-slate-700"] { color: var(--foreground) !important; }
 .dark [class~="text-slate-600"],
 .dark [class~="text-slate-500"],
-.dark [class~="text-slate-400"] { color: var(--muted-foreground) !important; }
+.dark [class~="text-slate-400"],
+.dark [class~="text-gray-500"] { color: var(--muted-foreground) !important; }
+.dark [class~="text-red-600"] { color: var(--destructive) !important; }
 .dark [class~="bg-indigo-600"] {
   background-color: var(--primary) !important;
   color: var(--primary-foreground) !important;
@@ -113,6 +115,9 @@ button, a, input, select, textarea, [role="button"] { -webkit-tap-highlight-colo
 .dark [class~="bg-sky-50"] { background-color: var(--secondary) !important; }
 .dark [class~="text-sky-700"] { color: #7dd9e9 !important; }
 .dark [class~="ring-sky-200"] { --tw-ring-color: rgb(125 217 233 / 0.28) !important; }
+.dark [class~="bg-purple-50"] { background-color: rgb(168 85 247 / 0.12) !important; }
+.dark [class~="text-purple-700"] { color: #c9a7f4 !important; }
+.dark [class~="ring-purple-200"] { --tw-ring-color: rgb(168 85 247 / 0.28) !important; }
 
 /* Preserve semantic status colors without importing their very-light daytime
    backgrounds into the dark finance workspace. */
