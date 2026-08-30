@@ -78,6 +78,7 @@ button, a, input, select, textarea, [role="button"] { -webkit-tap-highlight-colo
 .dark [class~="bg-slate-50/80"],
 .dark [class~="bg-slate-100"] { background-color: var(--secondary) !important; }
 .dark [class~="border-slate-200"] { border-color: var(--border) !important; }
+.dark [class~="ring-slate-200"] { --tw-ring-color: var(--border) !important; }
 .dark [class~="text-slate-900"],
 .dark [class~="text-slate-800"],
 .dark [class~="text-slate-700"] { color: var(--foreground) !important; }
@@ -89,6 +90,7 @@ button, a, input, select, textarea, [role="button"] { -webkit-tap-highlight-colo
   color: var(--primary-foreground) !important;
 }
 .dark [class~="bg-indigo-50"],
+.dark [class~="bg-indigo-50/40"],
 .dark [class~="bg-indigo-50/50"],
 .dark [class~="bg-indigo-100"] { background-color: var(--accent) !important; }
 .dark [class~="text-indigo-700"],
@@ -110,22 +112,30 @@ button, a, input, select, textarea, [role="button"] { -webkit-tap-highlight-colo
 .dark [class~="hover:border-slate-200"]:hover { border-color: var(--border) !important; }
 .dark [class~="bg-sky-50"] { background-color: var(--secondary) !important; }
 .dark [class~="text-sky-700"] { color: #7dd9e9 !important; }
+.dark [class~="ring-sky-200"] { --tw-ring-color: rgb(125 217 233 / 0.28) !important; }
 
 /* Preserve semantic status colors without importing their very-light daytime
    backgrounds into the dark finance workspace. */
-.dark [class~="bg-emerald-50"] { background-color: rgb(52 211 153 / 0.12) !important; }
+.dark [class~="bg-emerald-50"],
+.dark [class~="bg-emerald-50/40"] { background-color: rgb(52 211 153 / 0.12) !important; }
 .dark [class~="text-emerald-700"],
 .dark [class~="text-emerald-600"] { color: #78dfb7 !important; }
-.dark [class~="bg-rose-50"] { background-color: rgb(244 63 94 / 0.12) !important; }
+.dark [class~="ring-emerald-200"],
+.dark [class~="border-emerald-200"] { --tw-ring-color: rgb(52 211 153 / 0.28) !important; border-color: rgb(52 211 153 / 0.28) !important; }
+.dark [class~="bg-rose-50"],
+.dark [class~="bg-rose-50/40"] { background-color: rgb(244 63 94 / 0.12) !important; }
 .dark [class~="text-rose-700"],
 .dark [class~="text-rose-800"] { color: #f49a9a !important; }
 .dark [class~="border-rose-200"] { border-color: rgb(244 63 94 / 0.3) !important; }
+.dark [class~="ring-rose-200"] { --tw-ring-color: rgb(244 63 94 / 0.28) !important; }
 .dark [class~="hover:bg-rose-50"]:hover { background-color: rgb(244 63 94 / 0.14) !important; }
 .dark [class~="bg-amber-50/70"],
+.dark [class~="bg-amber-50/40"],
 .dark [class~="bg-amber-50"],
 .dark [class~="hover:bg-amber-100"]:hover { background-color: rgb(245 158 11 / 0.12) !important; }
 .dark [class~="border-amber-200"],
 .dark [class~="border-amber-300"] { border-color: rgb(245 158 11 / 0.32) !important; }
+.dark [class~="ring-amber-200"] { --tw-ring-color: rgb(245 158 11 / 0.28) !important; }
 .dark [class~="text-amber-900"],
 .dark [class~="text-amber-800"],
 .dark [class~="text-amber-700"] { color: #f5c66e !important; }
@@ -167,6 +177,20 @@ button, a, input, select, textarea, [role="button"] { -webkit-tap-highlight-colo
   input[type="checkbox"] {
     width: 20px;
     height: 20px;
+  }
+
+  [data-slot="card-content"] > .flex.items-center.justify-between.gap-3:has(button) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  [data-slot="card-content"] > .flex.items-center.justify-between.gap-3:has(button) > div:last-child {
+    flex-wrap: wrap;
+  }
+
+  [data-slot="card-content"] > .flex.items-center.justify-between.gap-3:has(button) > div:last-child > button,
+  [data-slot="card-content"] > .flex.items-center.justify-between.gap-3:has(button) > div:last-child > [data-slot="dialog"] {
+    flex: 1 1 auto;
   }
 }
 
